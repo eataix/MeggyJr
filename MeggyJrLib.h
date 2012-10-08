@@ -2,21 +2,21 @@
 
 #define DIMENSION 8
 
-byte            GameSlate[DIMENSION][DIMENSION];
+byte            game_slate[DIMENSION][DIMENSION];
 
-byte            lastButtonState;
-byte            Button_A;
-byte            Button_B;
-byte            Button_Up;
-byte            Button_Down;
-byte            Button_Left;
-byte            Button_Right;
+byte            last_button_state;
+byte            button_a;
+byte            button_b;
+byte            button_up;
+byte            button_down;
+byte            button_left;
+byte            button_right;
 
 #define MeggyCursorColor   15,15,15     // You can define color constants
                                         // like this.
 
 // Color lookup Table
-byte            ColorTable[26][3] = {
+byte            colour_table[26][3] = {
     {MeggyDark}
     ,
     {MeggyRed}
@@ -86,43 +86,43 @@ enum colors {
 void
 CheckButtonDown(void)
 {
-    byte            i = getButtons();
+    byte            i = GetButtons();
 
-    Button_B = (i & 1);
-    Button_A = (i & 2);
-    Button_Up = (i & 4);
-    Button_Down = (i & 8);
-    Button_Left = (i & 16);
-    Button_Right = (i & 32);
+    button_b = (i & 1);
+    button_a = (i & 2);
+    button_up = (i & 4);
+    button_down = (i & 8);
+    button_left = (i & 16);
+    button_right = (i & 32);
 
-    lastButtonState = i;
+    last_button_state = i;
 }
 
 void
-CheckButtonsPress(void)
+CheckButtonPressed(void)
 {
     byte            j;
-    byte            i = getButtons();
+    byte            i = GetButtons();
 
-    Button_B = (i & 1);
-    Button_A = (i & 2);
-    Button_Up = (i & 4);
-    Button_Down = (i & 8);
-    Button_Left = (i & 16);
-    Button_Right = (i & 32);
+    button_b = (i & 1);
+    button_a = (i & 2);
+    button_up = (i & 4);
+    button_down = (i & 8);
+    button_left = (i & 16);
+    button_right = (i & 32);
 
-    lastButtonState = i;
+    last_button_state = i;
 }
 
 void
-SetLeds(byte InputLEDs)
+SetLed(byte n)
 {
-    leds = InputLEDs;
+    leds = n;
 }
 
 
 void
-SetAuxLEDsBinary(byte n)
+SetLedBinary(byte n)
 {
     n = (n & 240) >> 4 | (n & 15) << 4;
     n = (n & 204) >> 2 | (n & 51) << 2;
@@ -130,27 +130,26 @@ SetAuxLEDsBinary(byte n)
 }
 
 void
-DrawPx(byte x, byte y, byte colour)
+Draw(byte x, byte y, byte colour)
 {
-    GameSlate[x][y] = colour;
+    game_slate[x][y] = colour;
 }
 
 // Same as above, except checks to see if pixel is onscreen
 // This function is new as of v 1.4
 void
-SafeDrawPx(byte xin, byte yin, byte color)
+SafeDraw(byte x, byte y, byte color)
 {
-    if ((xin >= 0) && (xin <= 7) && (yin >= 0) && (yin <= 7))
-        GameSlate[xin][yin] = color;
+    if ((x >= 0) && (x <= 7) && (y >= 0) && (y <= 7))
+        game_slate[x][y] = color;
 }
 
 // function to read color of pixel at position (x,y):
 byte
-ReadPx(byte xin, byte yin)
+ReadPixel(byte x, byte y)
 {
-    return GameSlate[xin][yin];
+    return game_slate[x][y];
 }
-
 
 // Empty the Game Slate:
 void
@@ -162,7 +161,7 @@ ClearSlate(void)
     while (i < 8) {
         j = 0;
         while (j < 8) {
-            GameSlate[i][j] = 0;
+            game_slate[i][j] = 0;
             j++;
         }
         i++;
@@ -174,14 +173,14 @@ DisplaySlate(void)
 {
     byte            j = 0;
     while (j < 8) {
-        setPixClr(j, 7, ColorTable[GameSlate[j][7]]);
-        setPixClr(j, 6, ColorTable[GameSlate[j][6]]);
-        setPixClr(j, 5, ColorTable[GameSlate[j][5]]);
-        setPixClr(j, 4, ColorTable[GameSlate[j][4]]);
-        setPixClr(j, 3, ColorTable[GameSlate[j][3]]);
-        setPixClr(j, 2, ColorTable[GameSlate[j][2]]);
-        setPixClr(j, 1, ColorTable[GameSlate[j][1]]);
-        setPixClr(j, 0, ColorTable[GameSlate[j][0]]);
+        SetPixelColour(j, 7, colour_table[game_slate[j][7]]);
+        SetPixelColour(j, 6, colour_table[game_slate[j][6]]);
+        SetPixelColour(j, 5, colour_table[game_slate[j][5]]);
+        SetPixelColour(j, 4, colour_table[game_slate[j][4]]);
+        SetPixelColour(j, 3, colour_table[game_slate[j][3]]);
+        SetPixelColour(j, 2, colour_table[game_slate[j][2]]);
+        SetPixelColour(j, 1, colour_table[game_slate[j][1]]);
+        SetPixelColour(j, 0, colour_table[game_slate[j][0]]);
         j++;
     }
 }
@@ -189,7 +188,7 @@ DisplaySlate(void)
 void
 SimpleInit(void)
 {
-    init();
-    clear();
-    lastButtonState = getButtons();
+    Init();
+    ClearFrame();
+    last_button_state = GetButtons();
 }

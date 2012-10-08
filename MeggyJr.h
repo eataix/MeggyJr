@@ -26,18 +26,20 @@
 byte            frame[DISP_BUFFER_SIZE];
 byte            leds;
 
-void            clear(void);
+void            ClearFrame(void);
 
-void            init(void);
+void            Init(void);
 
-void            setPixClr(byte x, byte y, byte * rgb);
+void            SetPixelColour(byte x, byte y, byte * rgb);
 
-byte            getPxR(byte x, byte y);
+byte            GetPixelRed(byte x, byte y);
 
-byte            getPxG(byte x, byte y);
+byte            GetPixelGreen(byte x, byte y);
 
-byte            getPxB(byte x, byte y);
+byte            GetPixelBlue(byte x, byte y);
 
-byte            getButtons(void);
+void			ClearPixel(byte x, byte y);
 
-void            delay(uint16_t ms);
+byte            GetButtons(void);
+
+void            Delay(uint16_t ms);

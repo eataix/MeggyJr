@@ -1,7 +1,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#include "Meg.h"
+#include "MeggyJr.h"
 
 byte            frame[DISP_BUFFER_SIZE];
 byte            leds;
@@ -10,17 +10,9 @@ byte            current_column;
 byte           *current_column_ptr;
 byte            current_brightness;
 
-void
-clear(void)
-{
-    byte            i;
-    for (i = 0; i < DISP_BUFFER_SIZE; ++i) {
-        frame[i] = 0;
-    }
-}
 
 void
-init(void)
+Init(void)
 {
     leds = 0;
     current_column_ptr = frame;
@@ -36,9 +28,11 @@ init(void)
     DDRB = 63U;
     PORTB = 255;
 
+
     PORTD |= 252U;
     PORTB |= 17U;
-    clear();
+
+    ClearFrame();
 
     TCCR2A = (1 << WGM21);
     TCCR2B = (1 << CS21);
@@ -49,7 +43,16 @@ init(void)
 }
 
 void
-setPixClr(byte x, byte y, byte * rgb)
+ClearFrame(void)
+{
+    byte            i;
+    for (i = 0; i < DISP_BUFFER_SIZE; ++i) {
+        frame[i] = 0;
+    }
+}
+
+void
+SetPixelColour(byte x, byte y, byte * rgb)
 {
     byte            pixelPtr = 24 * x + y;
     frame[pixelPtr] = rgb[2];
@@ -60,25 +63,25 @@ setPixClr(byte x, byte y, byte * rgb)
 }
 
 byte
-getPxR(byte x, byte y)
+GetPixelRed(byte x, byte y)
 {
     return frame[24 * x + y + 16];
 }
 
 byte
-getPxG(byte x, byte y)
+GetPixelGreen(byte x, byte y)
 {
     return frame[24 * x + y + 8];
 }
 
 byte
-getPxB(byte x, byte y)
+GetPixelBlue(byte x, byte y)
 {
     return frame[24 * x + y];
 }
 
 void
-clearPixel(byte x, byte y)
+ClearPixel(byte x, byte y)
 {
     byte            pixelPtr = 24 * x + y;
     frame[pixelPtr] = 0;
@@ -89,7 +92,7 @@ clearPixel(byte x, byte y)
 }
 
 byte
-getButtons(void)
+GetButtons(void)
 {
     return (~(PINC) & 63U);
 }
@@ -260,7 +263,7 @@ SIGNAL(TIMER2_COMPA_vect)
 }
 
 void
-delay(uint16_t ms)
+Delay(uint16_t ms)
 {
     uint16_t        i,
                     j;
