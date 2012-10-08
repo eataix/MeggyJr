@@ -49,7 +49,8 @@ byte            ColorTable[26][3] = {
     ,
     {MeggyCursorColor}
     ,                           // Extra bright cursor position color (not 
-                                // white).
+                                // 
+    // white).
     {0, 0, 0}
     ,                           // CustomColor0 (dark, by default)
     {0, 0, 0}

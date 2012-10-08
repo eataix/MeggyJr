@@ -13,31 +13,31 @@
 #define MeggyGreen     0,  15,  0
 #define MeggyBlue      0,   0,  5
 #define MeggyViolet    8,   0,  4
-#define MeggyWhite     3,  15,  2 
- 
+#define MeggyWhite     3,  15,  2
+
 #define MeggyDimRed    1,  0,   0
 #define MeggyDimGreen  0,  1,   0
 #define MeggyDimBlue   0,  0,   1
-#define MeggyDimOrange 1,  1,   0 
+#define MeggyDimOrange 1,  1,   0
 #define MeggydimYellow 1,  1,   0
 #define MeggydimAqua   0,  3,   1
 #define MeggydimViolet 2,  0,   1
 
-byte frame[DISP_BUFFER_SIZE];
-byte leds;
+byte            frame[DISP_BUFFER_SIZE];
+byte            leds;
 
-void clear(void);
+void            clear(void);
 
-void init(void);
+void            init(void);
 
-void setPixClr(byte x, byte y, byte *rgb);
+void            setPixClr(byte x, byte y, byte * rgb);
 
-byte getPxR(byte x, byte y);
+byte            getPxR(byte x, byte y);
 
-byte getPxG(byte x, byte y);
+byte            getPxG(byte x, byte y);
 
-byte getPxB(byte x, byte y);
+byte            getPxB(byte x, byte y);
 
-byte getButtons(void);
+byte            getButtons(void);
 
-void delay(uint16_t ms);
+void            delay(uint16_t ms);

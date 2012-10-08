@@ -3,29 +3,29 @@
 
 #include "Meg.h"
 
-byte frame[DISP_BUFFER_SIZE];
-byte leds;
+byte            frame[DISP_BUFFER_SIZE];
+byte            leds;
 
-byte currentCol;
-byte *currentColPtr;
-byte currentBt;
+byte            current_column;
+byte           *current_column_ptr;
+byte            current_brightness;
 
-    void
+void
 clear(void)
 {
-    byte i;
+    byte            i;
     for (i = 0; i < DISP_BUFFER_SIZE; ++i) {
         frame[i] = 0;
     }
 }
 
-    void
+void
 init(void)
 {
     leds = 0;
-    currentColPtr = frame;
-    currentCol = 0;
-    currentBt = 0;
+    current_column_ptr = frame;
+    current_column = 0;
+    current_brightness = 0;
 
     PORTC = 255U;
     DDRC = 0;
@@ -40,18 +40,18 @@ init(void)
     PORTB |= 17U;
     clear();
 
-    TCCR2A = (1<<WGM21);
-    TCCR2B = (1<<CS21);
+    TCCR2A = (1 << WGM21);
+    TCCR2B = (1 << CS21);
     OCR2A = (F_CPU >> 3) / 8 / 15 / FPS;
-    TIMSK2 = (1<<OCIE2A);
+    TIMSK2 = (1 << OCIE2A);
 
     sei();
 }
 
-    void
-setPixClr(byte x, byte y, byte *rgb)
+void
+setPixClr(byte x, byte y, byte * rgb)
 {
-    byte pixelPtr = 24 * x + y;
+    byte            pixelPtr = 24 * x + y;
     frame[pixelPtr] = rgb[2];
     pixelPtr += 8;
     frame[pixelPtr] = rgb[1];
@@ -59,28 +59,28 @@ setPixClr(byte x, byte y, byte *rgb)
     frame[pixelPtr] = rgb[0];
 }
 
-    byte  
+byte
 getPxR(byte x, byte y)
 {
     return frame[24 * x + y + 16];
 }
 
-    byte 
+byte
 getPxG(byte x, byte y)
 {
     return frame[24 * x + y + 8];
 }
 
-    byte 
+byte
 getPxB(byte x, byte y)
 {
     return frame[24 * x + y];
 }
 
-    void
+void
 clearPixel(byte x, byte y)
 {
-    byte pixelPtr = 24 * x + y;
+    byte            pixelPtr = 24 * x + y;
     frame[pixelPtr] = 0;
     pixelPtr += 8;
     frame[pixelPtr] = 0;
@@ -88,7 +88,7 @@ clearPixel(byte x, byte y)
     frame[pixelPtr] = 0;
 }
 
-    byte 
+byte
 getButtons(void)
 {
     return (~(PINC) & 63U);
@@ -96,32 +96,32 @@ getButtons(void)
 
 SIGNAL(TIMER2_COMPA_vect)
 {
-    if (++currentBt >= MAX_BT) {
-        currentBt = 0;
-        if (++currentCol > 7) {
-            currentCol = 0;
-            currentColPtr = frame;
+    if (++current_brightness >= MAX_BT) {
+        current_brightness = 0;
+        if (++current_column > 7) {
+            current_column = 0;
+            current_column_ptr = frame;
         } else {
-            currentColPtr += 24;
+            current_column_ptr += 24;
         }
     }
 
-    byte *ptr = currentColPtr + 23;
-    byte p;
-    byte cb = currentBt;
+    byte           *ptr = current_column_ptr + 23;
+    byte            p;
+    byte            cb = current_brightness;
 
     PORTD |= 252U;
     PORTB |= 17U;
 
     SPCR = 80;
 
-    if ((cb + currentCol) == 0) {
+    if ((cb + current_column) == 0) {
         SPDR = leds;
     } else {
         SPDR = 0;
     }
 
-    byte bits = 0;
+    byte            bits = 0;
 
     p = *ptr--;
     if (p > cb) {
@@ -228,27 +228,27 @@ SIGNAL(TIMER2_COMPA_vect)
         bits |= 1;
     }
 
-    while (!(SPSR && (1<<SPIF))) {
+    while (!(SPSR && (1 << SPIF))) {
     }
     SPDR = bits;
 
-    byte portbTemp = 0;
-    byte portdTemp = 0;
+    byte            portbTemp = 0;
+    byte            portdTemp = 0;
 
-    if (currentCol == 0) {
+    if (current_column == 0) {
         portbTemp = 239U;
-    } else if (currentCol == 1) {
+    } else if (current_column == 1) {
         portbTemp = 254U;
     } else {
-        portdTemp = ~(1 << (9 - currentCol));
+        portdTemp = ~(1 << (9 - current_column));
     }
 
-    while (!(SPSR && (1<<SPIF))) {
+    while (!(SPSR && (1 << SPIF))) {
     }
 
     PORTB |= 4;
 
-    if (currentCol > 1) {
+    if (current_column > 1) {
         PORTD &= portdTemp;
     } else {
         PORTB &= portbTemp;
@@ -259,61 +259,14 @@ SIGNAL(TIMER2_COMPA_vect)
     SPCR = 0;
 }
 
-    void
+void
 delay(uint16_t ms)
 {
-    uint16_t i,
-             j;
-    uint16_t loop = F_CPU / 17000;
+    uint16_t        i,
+                    j;
+    uint16_t        loop = F_CPU / 17000;
 
     for (i = 0; i < ms; i++) {
         for (j = 0; j < loop; j++);
     }
 }
-
-/*
-    void
-main()
-{
-    init();
-    char blue[3];
-    blue[0] = 0;
-    blue[1] = 0;
-    blue[2] = 127;
-
-    char green[3];
-    green[0] = 0;
-    green[1] = 127;
-    green[2] = 0;
-
-    char red[3];
-    red[0] = 127;
-    red[1] = 0;
-    red[2] = 0;
-
-    leds = 0x11;
-
-    int i, j;
-
-    for (i = 0; i <= 7; i++) {
-        for (j = 0; j <= 7; j++) {
-            switch ((i + j) % 3) {
-                case 0:
-                    setPixClr(i, j, blue);
-                    break;
-                case 1:
-                    setPixClr(i, j, red);
-                    break;
-                case 2:
-                default:
-                    setPixClr(i, j, green);
-                    break;
-            }
-        }
-    }
-
-    while (1) {
-        delay(100);
-    }
-}
-*/
