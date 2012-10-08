@@ -22,6 +22,10 @@ main(void)
     ClearSlate();
     DisplaySlate;
     ToneStart(ToneA6, 200);
+    Delay(100);
+    ToneStart(ToneAs3, 200);
+    Delay(100);
+    ToneStart(ToneA3, 200);
     while (1) {
         SetLedBinary(0 b01010101);
 

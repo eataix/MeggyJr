@@ -1,3 +1,6 @@
+#ifndef _MEGGYJR_H
+#define _MEGGYJR_H
+
 #include <inttypes.h>
 #include <avr/io.h>
 #define byte uint8_t
@@ -47,3 +50,5 @@ void            StartTone(unsigned int tone, unsigned int duration);
 void            SoundState(byte t);
 
 void            Delay(uint16_t ms);
+
+#endif
