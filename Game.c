@@ -21,12 +21,13 @@ main(void)
     // SetLedBinary(0b01010101);
     ClearSlate();
     DisplaySlate;
+    ToneStart(ToneA6, 200);
     while (1) {
-        SetLedBinary(0b01010101);
+        SetLedBinary(0 b01010101);
 
         SetAll(Orange);
         Delay(1000);
-        SetLedBinary(0b10101010);
+        SetLedBinary(0 b10101010);
         SetAll(Red);
         Delay(1000);
         // SetAll(Green);

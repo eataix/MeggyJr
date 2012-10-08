@@ -10,6 +10,8 @@ byte            current_column;
 byte           *current_column_ptr;
 byte            current_brightness;
 
+unsigned int    tone_time_remaining;
+byte            sound_enabled;
 
 void
 Init(void)
@@ -28,6 +30,8 @@ Init(void)
     DDRB = 63U;
     PORTB = 255;
 
+    tone_time_remaining = 0;
+    sound_enabled = 0;
 
     PORTD |= 252U;
     PORTB |= 17U;
@@ -97,6 +101,37 @@ GetButtons(void)
     return (~(PINC) & 63U);
 }
 
+void
+StartTone(unsigned int tone, unsigned int duration)
+{
+    OCR1A = tone;
+    SoundState(1);
+    tone_time_remaining = duration;
+}
+
+void
+SoundState(byte t)
+{
+    if (t) {
+        TCCR1A = 65;
+        TCCR1B = 17;
+        sound_enabled = 1;
+        DDRB |= 2;
+    } else {
+        sound_enabled = 0;
+        TCCR1A = 0;
+
+        if (t) {
+            TCCR1B = 128;
+        } else {
+            TCCR1B = 0;
+        }
+
+        DDRB &= 253;
+        PORTB |= 2;
+    }
+}
+
 SIGNAL(TIMER2_COMPA_vect)
 {
     if (++current_brightness >= MAX_BT) {
@@ -106,6 +141,15 @@ SIGNAL(TIMER2_COMPA_vect)
             current_column_ptr = frame;
         } else {
             current_column_ptr += 24;
+        }
+
+        if (tone_time_remaining > 0) {
+            if (--tone_time_remaining == 0) {
+                TCCR1A = 0;
+                DDRB &= 253;
+                PORTB |= 2;
+                TCCR1B = 0;
+            }
         }
     }
 

@@ -38,8 +38,12 @@ byte            GetPixelGreen(byte x, byte y);
 
 byte            GetPixelBlue(byte x, byte y);
 
-void			ClearPixel(byte x, byte y);
+void            ClearPixel(byte x, byte y);
 
 byte            GetButtons(void);
+
+void            StartTone(unsigned int tone, unsigned int duration);
+
+void            SoundState(byte t);
 
 void            Delay(uint16_t ms);
