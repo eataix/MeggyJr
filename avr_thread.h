@@ -1,0 +1,57 @@
+#ifndef __THREAD_H
+#define __THREAD_H
+
+#include <inttypes.h>
+
+#define MAX_NUM_THREADS 32
+#define MAX_QUANTUM 5
+
+enum avr_thread_state {
+    ats_invalid,
+    ats_runnable,
+    ats_running,
+    ats_paused,
+    ats_sleeping,
+    ats_stopped,
+};
+
+enum avr_thread_priority {
+    atp_noromal,
+    atp_critical
+};
+
+struct avr_thread_context {
+    enum avr_thread_state state;
+    uint8_t *stack;
+    uint16_t stack_size;
+    uint8_t *sp;
+    uint8_t ticks;
+    uint8_t quantum;
+    uint8_t priority;
+    uint16_t sleep_timer;
+    struct avr_thread_context *run_queue_prev;
+    struct avr_thread_context *run_queue_next;
+    struct avr_thread_context *sleep_queue_next;
+};
+
+struct avr_thread_context *avr_thread_init(uint16_t main_stack_size, uint8_t main_priority);
+
+struct avr_thread_context *avr_thread_create(void (*entry)(void),
+                                             uint8_t *stack,
+                                             uint16_t stack_size,
+                                             uint8_t priority);
+void avr_thread_sleep(uint16_t ms);
+
+void avr_thread_yield(void);
+
+void avr_thread_pause(struct avr_thread_context *t);
+
+void avr_thread_resume(struct avr_thread_context *t);
+
+void avr_thread_stop(struct avr_thread_context *t);
+
+void avr_thread_tick(void);
+
+void avr_thread_save_sp(uint8_t *sp);
+
+#endif
