@@ -32,9 +32,29 @@ struct avr_thread_context {
     struct avr_thread_context *run_queue_prev;
     struct avr_thread_context *run_queue_next;
     struct avr_thread_context *sleep_queue_next;
+    struct avr_thread_context *next_waiting;
+    void *waiting_for;
 };
 
-struct avr_thread_context *avr_thread_init(uint16_t main_stack_size, uint8_t main_priority);
+struct avr_thread_mutex {
+    uint8_t lock_count;
+    struct avr_thread_context *owner;
+    struct avr_thread_context *waiting;
+};
+
+struct avr_thread_mutex_basic {
+    uint8_t locked;
+};
+
+struct avr_thread_semaphore {
+    uint8_t lock_count;
+    struct avr_thread_mutex_basic *mutex;
+};
+
+extern struct avr_thread_context *avr_thread_active_context;
+
+struct avr_thread_context *avr_thread_init(uint16_t main_stack_size,
+                                           uint8_t main_priority);
 
 struct avr_thread_context *avr_thread_create(void (*entry)(void),
                                              uint8_t *stack,

@@ -10,10 +10,11 @@
 /*
  * Variables
  */
+struct avr_thread_context *avr_thread_active_context;
+
 static struct avr_thread_context *avr_thread_main_context;
 static struct avr_thread_context *avr_thread_idle_context;
 
-static struct avr_thread_context *avr_thread_active_context;
 static struct avr_thread_context *avr_thread_prev_context;
 
 static uint8_t avr_thread_idle_stack[IDLE_THREAD_STACK_SIZE];
