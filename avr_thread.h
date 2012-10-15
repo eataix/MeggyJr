@@ -4,7 +4,7 @@
 #include <inttypes.h>
 
 #define MAX_NUM_THREADS 32
-#define MAX_QUANTUM 5
+#define MAX_QUANTUM 255
 
 enum avr_thread_state {
     ats_invalid,

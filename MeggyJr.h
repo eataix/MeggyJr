@@ -7,6 +7,7 @@
 #define DISP_BUFFER_SIZE 192
 #define MAX_BT 15
 #define FPS 120
+#define F_CPU 16000000UL
 
 // Predefined Colors: 
 #define MeggyDark      0,  0,   0

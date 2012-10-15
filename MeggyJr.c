@@ -1,7 +1,12 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay_basic.h>
+
+#define F_CPU 16000000UL
 
 #include "MeggyJr.h"
+#include "avr_thread.h"
+#include "threads.h"
 
 byte            frame[DISP_BUFFER_SIZE];
 byte            leds;
@@ -43,7 +48,7 @@ Init(void)
     OCR2A = (F_CPU >> 3) / 8 / 15 / FPS;
     TIMSK2 = (1 << OCIE2A);
 
-    sei();
+    //sei();
 }
 
 void
@@ -134,11 +139,15 @@ SoundState(byte t)
 
 SIGNAL(TIMER2_COMPA_vect)
 {
+    cli();
+
     if (++current_brightness >= MAX_BT) {
         current_brightness = 0;
         if (++current_column > 7) {
             current_column = 0;
             current_column_ptr = frame;
+            avr_thread_tick();
+            //thread_tick();
         } else {
             current_column_ptr += 24;
         }
@@ -304,6 +313,9 @@ SIGNAL(TIMER2_COMPA_vect)
     PORTB &= 251;
 
     SPCR = 0;
+    //thread_tick();
+
+    sei();
 }
 
 void
@@ -312,8 +324,10 @@ Delay(uint16_t ms)
     uint16_t        i,
                     j;
     uint16_t        loop = F_CPU / 17000;
-
     for (i = 0; i < ms; i++) {
         for (j = 0; j < loop; j++);
     }
+    /*
+    _delay_loop_2(ms);
+    */
 }
