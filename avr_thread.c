@@ -42,7 +42,8 @@ static void avr_thread_init_thread(struct avr_thread_context *t,
 avr_thread_sleep(uint16_t ms)
 {
     struct avr_thread_context *t,
-                      *p;
+                              *p;
+
     uint8_t ints;
 
     ints = SREG & 0x80;
@@ -54,15 +55,12 @@ avr_thread_sleep(uint16_t ms)
         sleeping_queue = avr_thread_active_context;
         avr_thread_active_context->sleep_queue_next = NULL;
         avr_thread_active_context->sleep_timer = ms;
-        avr_thread_active_context->state = ats_sleeping;
         avr_thread_yield();
         SREG |= ints;
         return;
     }
 
-    p = NULL;
-    t = sleeping_queue;
-    for(; t != NULL;) {
+    for(p = NULL, t = sleeping_queue; t != NULL;) {
         if (ms < t->sleep_timer) {
             t->sleep_timer -= ms;
             avr_thread_active_context->sleep_queue_next = t;
@@ -101,7 +99,8 @@ avr_thread_tick(void)
     if (sleeping_queue != NULL) {
         --(sleeping_queue->sleep_timer);
         if (sleeping_queue->sleep_timer == 0) {
-            while (sleeping_queue && (sleeping_queue->sleep_timer == 0)) {
+            while (sleeping_queue != NULL &&
+                   sleeping_queue->sleep_timer == 0) {
                 sleeping_queue->state = ats_runnable;
                 put_run_queue(sleeping_queue);
                 if (sleeping_queue->priority > avr_thread_active_context->priority) {
@@ -305,10 +304,9 @@ get_run_queue(void)
         r->run_queue_prev = NULL;
         return r;
     }
-
     
-    //return avr_thread_active_context;
-    return NULL;
+    return avr_thread_active_context;
+    //return NULL;
 }
 
     static void
@@ -390,7 +388,7 @@ avr_thread_pause(struct avr_thread_context *t)
     take_sleeping_queue(t);
     t->state = ats_paused;
 
-    if (avr_thread_active_context == t) {
+    if (t == avr_thread_active_context) {
         avr_thread_yield();
     }
 
@@ -409,8 +407,6 @@ avr_thread_resume(struct avr_thread_context *t)
 
     ints = SREG & 0x80;
     cli();
-    take_run_queue(t);
-    take_sleeping_queue(t);
 
     t->state = ats_runnable;
     put_run_queue(t);
@@ -435,15 +431,10 @@ avr_thread_yield(void)
         put_run_queue(avr_thread_active_context);
     }
 
-    /*
-    t = avr_thread_main_context;
-    */
     t = get_run_queue();
 
-    if (t == NULL || t == avr_thread_active_context) {
+    if (t == avr_thread_active_context) {
         avr_thread_active_context->ticks = avr_thread_active_context->quantum;
-        SREG |= ints;
-        return;
     } else {
         avr_thread_prev_context = avr_thread_active_context;
         avr_thread_active_context = t;

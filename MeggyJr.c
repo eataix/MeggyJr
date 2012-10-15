@@ -6,7 +6,6 @@
 
 #include "MeggyJr.h"
 #include "avr_thread.h"
-#include "threads.h"
 
 byte            frame[DISP_BUFFER_SIZE];
 byte            leds;
