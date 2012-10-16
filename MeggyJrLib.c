@@ -49,6 +49,7 @@ byte            colour_table[26][3] = {
     // 
     // 
     // 
+    // 
     // white).
     {0, 0, 0}
     ,                           // CustomColor0 (dark, by default)

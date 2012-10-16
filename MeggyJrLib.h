@@ -7,6 +7,12 @@
 
 #define MeggyCursorColor   15,15,15     // You can define color constants
                                         // like this.
+extern byte     button_a;
+extern byte     button_b;
+extern byte     button_up;
+extern byte     button_down;
+extern byte     button_left;
+extern byte     button_right;
 
 
 // Assign those colors names that we can use:

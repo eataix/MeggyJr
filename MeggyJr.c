@@ -47,7 +47,7 @@ Init(void)
     OCR2A = (F_CPU >> 3) / 8 / 15 / FPS;
     TIMSK2 = (1 << OCIE2A);
 
-    //sei();
+    // sei();
 }
 
 void
@@ -146,7 +146,7 @@ SIGNAL(TIMER2_COMPA_vect)
             current_column = 0;
             current_column_ptr = frame;
             avr_thread_tick();
-            //thread_tick();
+            // thread_tick();
         } else {
             current_column_ptr += 24;
         }
@@ -312,7 +312,7 @@ SIGNAL(TIMER2_COMPA_vect)
     PORTB &= 251;
 
     SPCR = 0;
-    //thread_tick();
+    // thread_tick();
 
     sei();
 }
@@ -327,6 +327,6 @@ Delay(uint16_t ms)
         for (j = 0; j < loop; j++);
     }
     /*
-    _delay_loop_2(ms);
-    */
+     * _delay_loop_2(ms); 
+     */
 }
