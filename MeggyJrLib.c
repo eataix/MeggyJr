@@ -1,15 +1,16 @@
 #include "MeggyJrLib.h"
 #include "MeggyJr.h"
 
-byte            game_slate[DIMENSION][DIMENSION];
-
-byte            last_button_state;
 byte            button_a;
 byte            button_b;
 byte            button_up;
 byte            button_down;
 byte            button_left;
 byte            button_right;
+
+static byte     game_slate[DIMENSION][DIMENSION];
+static byte     last_button_state;
+
 
 // Color lookup Table
 byte            colour_table[26][3] = {
@@ -44,13 +45,7 @@ byte            colour_table[26][3] = {
     {MeggydimViolet}
     ,
     {MeggyCursorColor}
-    ,                           // Extra bright cursor position color (not 
-                                // 
-    // 
-    // 
-    // 
-    // 
-    // white).
+    ,
     {0, 0, 0}
     ,                           // CustomColor0 (dark, by default)
     {0, 0, 0}
@@ -72,11 +67,11 @@ byte            colour_table[26][3] = {
     {0, 0, 0}                   // CustomColor9 (dark, by default)
 };
 
-
 void
 CheckButtonDown(void)
 {
-    byte            i = GetButtons();
+    byte            i;
+    i = GetButtons();
 
     button_b = (i & 1);
     button_a = (i & 2);
@@ -142,32 +137,24 @@ ClearSlate(void)
 {
     byte            i;
     byte            j;
-    i = 0;
-    while (i < 8) {
-        j = 0;
-        while (j < 8) {
+
+    for (i = 0; i < 8; ++i) {
+        for (j = 0; j < 8; ++j) {
             game_slate[i][j] = 0;
-            j++;
         }
-        i++;
     }
 }
-
 
 void
 DisplaySlate(void)
 {
-    byte            j = 0;
-    while (j < 8) {
-        SetPixelColour(j, 7, colour_table[game_slate[j][7]]);
-        SetPixelColour(j, 6, colour_table[game_slate[j][6]]);
-        SetPixelColour(j, 5, colour_table[game_slate[j][5]]);
-        SetPixelColour(j, 4, colour_table[game_slate[j][4]]);
-        SetPixelColour(j, 3, colour_table[game_slate[j][3]]);
-        SetPixelColour(j, 2, colour_table[game_slate[j][2]]);
-        SetPixelColour(j, 1, colour_table[game_slate[j][1]]);
-        SetPixelColour(j, 0, colour_table[game_slate[j][0]]);
-        j++;
+    byte            i,
+                    j;
+
+    for (i = 0; i < 8; ++i) {
+        for (j = 0; j < 8; ++j) {
+            SetPixelColour(i, j, colour_table[game_slate[i][j]]);
+        }
     }
 }
 
@@ -177,7 +164,6 @@ ToneStart(unsigned int divisor, unsigned int duration_ms)
     StartTone(divisor, duration_ms);
 }
 
-
 void
 SimpleInit(void)
 {
@@ -186,16 +172,4 @@ SimpleInit(void)
     last_button_state = GetButtons();
     StartTone(0, 0);
     SoundOff();
-}
-
-void
-SoundOn(void)
-{
-    SoundState(1);
-}
-
-void
-SoundOff(void)
-{
-    SoundState(0);
 }

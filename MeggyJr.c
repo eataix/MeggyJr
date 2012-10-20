@@ -35,6 +35,7 @@ Init(void)
     PORTB = 255;
 
     tone_time_remaining = 0;
+
     sound_enabled = 0;
 
     PORTD |= 252U;
@@ -47,6 +48,7 @@ Init(void)
     OCR2A = (F_CPU >> 3) / 8 / 15 / FPS;
     TIMSK2 = (1 << OCIE2A);
 
+    // TODO
     // sei();
 }
 
@@ -54,6 +56,7 @@ void
 ClearFrame(void)
 {
     byte            i;
+    // I hope this can be as fast as memset(3).
     for (i = 0; i < DISP_BUFFER_SIZE; ++i) {
         frame[i] = 0;
     }
@@ -62,7 +65,9 @@ ClearFrame(void)
 void
 SetPixelColour(byte x, byte y, byte * rgb)
 {
-    byte            pixelPtr = 24 * x + y;
+    byte            pixelPtr;
+
+    pixelPtr = 24 * x + y;
     frame[pixelPtr] = rgb[2];
     pixelPtr += 8;
     frame[pixelPtr] = rgb[1];
@@ -91,7 +96,8 @@ GetPixelBlue(byte x, byte y)
 void
 ClearPixel(byte x, byte y)
 {
-    byte            pixelPtr = 24 * x + y;
+    byte            pixelPtr;
+    pixelPtr = 24 * x + y;
     frame[pixelPtr] = 0;
     pixelPtr += 8;
     frame[pixelPtr] = 0;
@@ -136,23 +142,29 @@ SoundState(byte t)
     }
 }
 
+/**
+ * ISR
+ *
+ * Here is the ISR.
+ **/
 SIGNAL(TIMER2_COMPA_vect)
 {
     cli();
 
     if (++current_brightness >= MAX_BT) {
         current_brightness = 0;
-        if (++current_column > 7) {
+        ++current_column;
+        if (current_column > 7) {
             current_column = 0;
             current_column_ptr = frame;
             avr_thread_tick();
-            // thread_tick();
         } else {
-            current_column_ptr += 24;
+            current_column_ptr += 24;   // 3 * 8
         }
 
         if (tone_time_remaining > 0) {
-            if (--tone_time_remaining == 0) {
+            --tone_time_remaining;
+            if (tone_time_remaining == 0) {
                 TCCR1A = 0;
                 DDRB &= 253;
                 PORTB |= 2;
@@ -247,6 +259,9 @@ SIGNAL(TIMER2_COMPA_vect)
         bits |= 1;
     }
 
+    while (!(SPSR && (1 << SPIF))) {
+        // Spin;
+    }
     SPDR = bits;
 
     bits = 0;
@@ -284,6 +299,7 @@ SIGNAL(TIMER2_COMPA_vect)
     }
 
     while (!(SPSR && (1 << SPIF))) {
+        // Spin;
     }
     SPDR = bits;
 
@@ -299,6 +315,7 @@ SIGNAL(TIMER2_COMPA_vect)
     }
 
     while (!(SPSR && (1 << SPIF))) {
+        // Spin;
     }
 
     PORTB |= 4;
@@ -312,21 +329,22 @@ SIGNAL(TIMER2_COMPA_vect)
     PORTB &= 251;
 
     SPCR = 0;
-    // thread_tick();
 
+    // TODO
     sei();
 }
 
+// TODO
 void
 Delay(uint16_t ms)
 {
     uint16_t        i,
                     j;
+
     uint16_t        loop = F_CPU / 17000;
     for (i = 0; i < ms; i++) {
-        for (j = 0; j < loop; j++);
+        for (j = 0; j < loop; j++) {
+            // Do nothing but burning CPU cycles.
+        }
     }
-    /*
-     * _delay_loop_2(ms); 
-     */
 }

@@ -33,7 +33,6 @@ void            SetLed(byte n);
 
 void            SetLedBinary(byte n);
 
-
 void            Draw(byte x, byte y, byte colour);
 
 void            SafeDraw(byte x, byte y, byte color);
@@ -129,15 +128,10 @@ void            DisplaySlate(void);
 #define ToneD9      851
 #define ToneDs9     803
 
-
-void
-                SoundOn(void);
-
-void
-                SoundOff(void);
+#define SoundOn()   SoundState(1)
+#define SoundOff()  SoundState(0)
 
 #define MakingSound  (TCCR1B > 0)
-
 
 void            ToneStart(unsigned int divisor, unsigned int duration_ms);
 
