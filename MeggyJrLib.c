@@ -1,19 +1,19 @@
 #include "MeggyJrLib.h"
 #include "MeggyJr.h"
 
-byte            button_a;
-byte            button_b;
-byte            button_up;
-byte            button_down;
-byte            button_left;
-byte            button_right;
+byte            meggyjr_button_a;
+byte            meggyjr_button_b;
+byte            meggyjr_button_up;
+byte            meggyjr_button_down;
+byte            meggyjr_button_left;
+byte            meggyjr_button_right;
 
-static byte     game_slate[DIMENSION][DIMENSION];
+static byte     meggyjr_game_slate[DIMENSION][DIMENSION];
 static byte     last_button_state;
 
 
 // Color lookup Table
-byte            colour_table[26][3] = {
+byte            meggyjr_colour_table[26][3] = {
     {MeggyDark}
     ,
     {MeggyRed}
@@ -68,45 +68,45 @@ byte            colour_table[26][3] = {
 };
 
 void
-CheckButtonDown(void)
+meggyjr_check_button_down(void)
 {
     byte            i;
-    i = GetButtons();
+    i = meggyjr_get_button();
 
-    button_b = (i & 1);
-    button_a = (i & 2);
-    button_up = (i & 4);
-    button_down = (i & 8);
-    button_left = (i & 16);
-    button_right = (i & 32);
+    meggyjr_button_b = (i & 1);
+    meggyjr_button_a = (i & 2);
+    meggyjr_button_up = (i & 4);
+    meggyjr_button_down = (i & 8);
+    meggyjr_button_left = (i & 16);
+    meggyjr_button_right = (i & 32);
 
     last_button_state = i;
 }
 
 void
-CheckButtonPressed(void)
+meggyjr_check_button_pressed(void)
 {
     byte            j;
-    byte            i = GetButtons();
+    byte            i = meggyjr_get_button();
 
-    button_b = (i & 1);
-    button_a = (i & 2);
-    button_up = (i & 4);
-    button_down = (i & 8);
-    button_left = (i & 16);
-    button_right = (i & 32);
+    meggyjr_button_b = (i & 1);
+    meggyjr_button_a = (i & 2);
+    meggyjr_button_up = (i & 4);
+    meggyjr_button_down = (i & 8);
+    meggyjr_button_left = (i & 16);
+    meggyjr_button_right = (i & 32);
 
     last_button_state = i;
 }
 
 void
-SetLed(byte n)
+meggyjr_set_led(byte n)
 {
     leds = n;
 }
 
 void
-SetLedBinary(byte n)
+meggyjr_set_led_binary(byte n)
 {
     n = (n & 240) >> 4 | (n & 15) << 4;
     n = (n & 204) >> 2 | (n & 51) << 2;
@@ -114,62 +114,75 @@ SetLedBinary(byte n)
 }
 
 void
-Draw(byte x, byte y, byte colour)
+meggyjr_draw(byte x, byte y, byte colour)
 {
-    game_slate[x][y] = colour;
+    meggyjr_game_slate[x][y] = colour;
 }
 
 void
-SafeDraw(byte x, byte y, byte color)
+meggyjr_safe_draw(byte x, byte y, byte color)
 {
     if ((x >= 0) && (x <= 7) && (y >= 0) && (y <= 7))
-        game_slate[x][y] = color;
+        meggyjr_game_slate[x][y] = color;
 }
 
 byte
-ReadPixel(byte x, byte y)
+meggyjr_read_pixel(byte x, byte y)
 {
-    return game_slate[x][y];
+    return meggyjr_game_slate[x][y];
 }
 
 void
-ClearSlate(void)
+meggyjr_clear_slate(void)
 {
     byte            i;
     byte            j;
 
     for (i = 0; i < 8; ++i) {
         for (j = 0; j < 8; ++j) {
-            game_slate[i][j] = 0;
+            meggyjr_game_slate[i][j] = 0;
         }
     }
 }
 
 void
-DisplaySlate(void)
+meggyjr_display_slate(void)
 {
     byte            i,
                     j;
 
     for (i = 0; i < 8; ++i) {
         for (j = 0; j < 8; ++j) {
-            SetPixelColour(i, j, colour_table[game_slate[i][j]]);
+            meggyjr_set_pixel_color(i, j,
+                                    meggyjr_colour_table[meggyjr_game_slate
+                                                         [i][j]]);
         }
     }
 }
 
 void
-ToneStart(unsigned int divisor, unsigned int duration_ms)
+meggyjr_tone_start(unsigned int divisor, unsigned int duration_ms)
 {
-    StartTone(divisor, duration_ms);
+    meggyjr_start_tone(divisor, duration_ms);
 }
 
 void
-SimpleInit(void)
+meggyjr_sound_on(void)
 {
-    Init();
-    ClearFrame();
-    last_button_state = GetButtons();
-    StartTone(0, 0);
-    SoundOff();
+    meggyjr_set_sound_state(1);
+}
+void
+meggyjr_sound_off(void)
+{
+    meggyjr_set_sound_state(0);
+}
+
+void
+meggyjr_setup(void)
+{
+    meggyjr_init();
+    meggyjr_clear_frame();
+    last_button_state = meggyjr_get_button();
+    // StartTone(0, 0);
+    meggyjr_sound_off();
 }

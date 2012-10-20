@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <avr/io.h>
 #define byte uint8_t
+
 #define DISP_BUFFER_SIZE 192
 #define MAX_BT 15
 #define FPS 120
@@ -27,29 +28,29 @@
 #define MeggydimAqua   0,  3,   1
 #define MeggydimViolet 2,  0,   1
 
-byte            frame[DISP_BUFFER_SIZE];
-byte            leds;
+extern byte     leds;
 
-void            ClearFrame(void);
+void            meggyjr_init(void);
 
-void            Init(void);
+void            meggyjr_clear_frame(void);
 
-void            SetPixelColour(byte x, byte y, byte * rgb);
+void            meggyjr_set_pixel_color(byte x, byte y, byte * rgb);
 
-byte            GetPixelRed(byte x, byte y);
+byte            meggyjr_get_pixel_red(byte x, byte y);
 
-byte            GetPixelGreen(byte x, byte y);
+byte            meggyjr_get_pixel_green(byte x, byte y);
 
-byte            GetPixelBlue(byte x, byte y);
+byte            meggyjr_get_pixel_blue(byte x, byte y);
 
-void            ClearPixel(byte x, byte y);
+void            meggyjr_clear_pixel(byte x, byte y);
 
-byte            GetButtons(void);
+byte            meggyjr_get_button(void);
 
-void            StartTone(unsigned int tone, unsigned int duration);
+void            meggyjr_start_tone(unsigned int tone,
+                                   unsigned int duration);
 
-void            SoundState(byte t);
+void            meggyjr_set_sound_state(byte t);
 
-void            Delay(uint16_t ms);
+void            meggyjr_delay(uint16_t ms);
 
 #endif

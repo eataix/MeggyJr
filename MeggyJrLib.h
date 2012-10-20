@@ -1,18 +1,20 @@
 #ifndef _MEGGYJRLIB_H
 #define _MEGGYJRLIB_H
 
-#include "MeggyJr.h"
+#include <inttypes.h>
 
 #define DIMENSION 8
 
 #define MeggyCursorColor   15,15,15     // You can define color constants
                                         // like this.
-extern byte     button_a;
-extern byte     button_b;
-extern byte     button_up;
-extern byte     button_down;
-extern byte     button_left;
-extern byte     button_right;
+#define byte uint8_t
+
+extern byte     meggyjr_button_a;
+extern byte     meggyjr_button_b;
+extern byte     meggyjr_button_up;
+extern byte     meggyjr_button_down;
+extern byte     meggyjr_button_left;
+extern byte     meggyjr_button_right;
 
 
 // Assign those colors names that we can use:
@@ -24,24 +26,24 @@ enum colors {
     CustomColor5, CustomColor6, CustomColor7, CustomColor8, CustomColor9
 };
 
+void            meggyjr_check_button_down(void);
 
-void            CheckButtonDown(void);
 
-void            CheckButtonPressed(void);
+void            meggyjr_check_button_pressed(void);
 
-void            SetLed(byte n);
+void            meggyjr_set_led(byte n);
 
-void            SetLedBinary(byte n);
+void            meggyjr_set_led_binary(byte n);
 
-void            Draw(byte x, byte y, byte colour);
+void            meggyjr_draw(byte x, byte y, byte colour);
 
-void            SafeDraw(byte x, byte y, byte color);
+void            meggyjr_safe_draw(byte x, byte y, byte color);
 
-byte            ReadPixel(byte x, byte y);
+byte            meggyjr_read_pixel(byte x, byte y);
 
-void            ClearSlate(void);
+void            meggyjr_clear_slate(void);
 
-void            DisplaySlate(void);
+void            meggyjr_display_slate(void);
 
 #define ToneB2      64783
 
@@ -128,13 +130,14 @@ void            DisplaySlate(void);
 #define ToneD9      851
 #define ToneDs9     803
 
-#define SoundOn()   SoundState(1)
-#define SoundOff()  SoundState(0)
+void            meggyjr_sound_enable(void);
+void            meggyjr_sound_disable(void);
 
-#define MakingSound  (TCCR1B > 0)
+// #define MakingSound (TCCR1B > 0)
 
-void            ToneStart(unsigned int divisor, unsigned int duration_ms);
+void            meggyjr_tone_start(unsigned int divisor,
+                                   unsigned int duration_ms);
 
-void            SimpleInit(void);
+void            meggyjr_setup(void);
 
 #endif

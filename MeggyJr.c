@@ -7,18 +7,18 @@
 #include "MeggyJr.h"
 #include "avr_thread.h"
 
-byte            frame[DISP_BUFFER_SIZE];
+static byte     frame[DISP_BUFFER_SIZE];
 byte            leds;
 
-byte            current_column;
-byte           *current_column_ptr;
-byte            current_brightness;
+static byte     current_column;
+static byte    *current_column_ptr;
+static byte     current_brightness;
 
-unsigned int    tone_time_remaining;
-byte            sound_enabled;
+static unsigned int tone_time_remaining;
+static byte     sound_enabled;
 
 void
-Init(void)
+meggyjr_init(void)
 {
     leds = 0;
     current_column_ptr = frame;
@@ -41,7 +41,7 @@ Init(void)
     PORTD |= 252U;
     PORTB |= 17U;
 
-    ClearFrame();
+    meggyjr_clear_frame();
 
     TCCR2A = (1 << WGM21);
     TCCR2B = (1 << CS21);
@@ -53,7 +53,7 @@ Init(void)
 }
 
 void
-ClearFrame(void)
+meggyjr_clear_frame(void)
 {
     byte            i;
     // I hope this can be as fast as memset(3).
@@ -63,7 +63,7 @@ ClearFrame(void)
 }
 
 void
-SetPixelColour(byte x, byte y, byte * rgb)
+meggyjr_set_pixel_color(byte x, byte y, byte * rgb)
 {
     byte            pixelPtr;
 
@@ -76,25 +76,25 @@ SetPixelColour(byte x, byte y, byte * rgb)
 }
 
 byte
-GetPixelRed(byte x, byte y)
+meggyjr_get_pixel_red(byte x, byte y)
 {
     return frame[24 * x + y + 16];
 }
 
 byte
-GetPixelGreen(byte x, byte y)
+meggyjr_get_pixel_green(byte x, byte y)
 {
     return frame[24 * x + y + 8];
 }
 
 byte
-GetPixelBlue(byte x, byte y)
+meggyjr_get_pixel_blue(byte x, byte y)
 {
     return frame[24 * x + y];
 }
 
 void
-ClearPixel(byte x, byte y)
+meggyjr_clear_pixel(byte x, byte y)
 {
     byte            pixelPtr;
     pixelPtr = 24 * x + y;
@@ -106,21 +106,21 @@ ClearPixel(byte x, byte y)
 }
 
 byte
-GetButtons(void)
+meggyjr_get_button(void)
 {
     return (~(PINC) & 63U);
 }
 
 void
-StartTone(unsigned int tone, unsigned int duration)
+meggyjr_start_tone(unsigned int tone, unsigned int duration)
 {
     OCR1A = tone;
-    SoundState(1);
+    meggyjr_set_sound_state(1);
     tone_time_remaining = duration;
 }
 
 void
-SoundState(byte t)
+meggyjr_set_sound_state(byte t)
 {
     if (t) {
         TCCR1A = 65;
@@ -336,7 +336,7 @@ SIGNAL(TIMER2_COMPA_vect)
 
 // TODO
 void
-Delay(uint16_t ms)
+meggyjr_delay(uint16_t ms)
 {
     uint16_t        i,
                     j;
