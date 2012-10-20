@@ -19,21 +19,22 @@ static struct avr_thread_context *avr_thread_prev_context;
 
 static uint8_t  avr_thread_idle_stack[IDLE_THREAD_STACK_SIZE];
 
-static struct avr_thread_context *run_queue;
-static struct avr_thread_context *sleeping_queue;
+static struct avr_thread_context *avr_thread_run_queue;
+static struct avr_thread_context *avr_thread_sleep_queue;
 
 static struct avr_thread_context avr_thread_threads[MAX_NUM_THREADS];
 
 /*
  * Prototypes
  */
-static void     put_run_queue(struct avr_thread_context *t);
-static struct avr_thread_context *get_run_queue(void);
-static void     take_run_queue(struct avr_thread_context *t);
-static void     take_sleeping_queue(struct avr_thread_context *t);
+static void     avr_thread_run_queue_push(struct avr_thread_context *t);
+static struct avr_thread_context *avr_thread_run_queue_pop(void);
+static void     avr_thread_run_queue_remove(struct avr_thread_context *t);
+static void     avr_thread_sleep_queue_remove(struct avr_thread_context
+                                              *t);
 
 static void     avr_thread_idle_entry(void);
-void            avr_thread_switch_to(uint8_t * new_sp);
+void            avr_thread_switch_to(uint8_t * new_stack_pointer);
 
 static void     avr_thread_init_thread(struct avr_thread_context *t,
                                        void (*entry) (void),
@@ -54,8 +55,8 @@ avr_thread_sleep(uint16_t ms)
 
     avr_thread_active_context->state = ats_sleeping;
 
-    if (sleeping_queue == NULL) {
-        sleeping_queue = avr_thread_active_context;
+    if (avr_thread_sleep_queue == NULL) {
+        avr_thread_sleep_queue = avr_thread_active_context;
         avr_thread_active_context->sleep_queue_next = NULL;
         avr_thread_active_context->sleep_timer = ms;
         avr_thread_yield();
@@ -63,7 +64,7 @@ avr_thread_sleep(uint16_t ms)
         return;
     }
 
-    for (p = NULL, t = sleeping_queue; t != NULL;) {
+    for (p = NULL, t = avr_thread_sleep_queue; t != NULL;) {
         if (ms < t->sleep_timer) {
             t->sleep_timer -= ms;
             avr_thread_active_context->sleep_queue_next = t;
@@ -71,7 +72,7 @@ avr_thread_sleep(uint16_t ms)
             if (p) {
                 p->sleep_queue_next = avr_thread_active_context;
             } else {
-                sleeping_queue = avr_thread_active_context;
+                avr_thread_sleep_queue = avr_thread_active_context;
             }
             avr_thread_yield();
             SREG |= ints;
@@ -99,19 +100,20 @@ avr_thread_tick(void)
 
     should_yield = 0;
 
-    if (sleeping_queue != NULL) {
-        --(sleeping_queue->sleep_timer);
-        if (sleeping_queue->sleep_timer == 0) {
-            while (sleeping_queue != NULL &&
-                   sleeping_queue->sleep_timer == 0) {
-                sleeping_queue->state = ats_runnable;
-                put_run_queue(sleeping_queue);
-                if (sleeping_queue->priority >
+    if (avr_thread_sleep_queue != NULL) {
+        --(avr_thread_sleep_queue->sleep_timer);
+        if (avr_thread_sleep_queue->sleep_timer == 0) {
+            while (avr_thread_sleep_queue != NULL &&
+                   avr_thread_sleep_queue->sleep_timer == 0) {
+                avr_thread_sleep_queue->state = ats_runnable;
+                avr_thread_run_queue_push(avr_thread_sleep_queue);
+                if (avr_thread_sleep_queue->priority >
                     avr_thread_active_context->priority) {
                     should_yield = 1;
                 }
-                t = sleeping_queue;
-                sleeping_queue = sleeping_queue->sleep_queue_next;
+                t = avr_thread_sleep_queue;
+                avr_thread_sleep_queue =
+                    avr_thread_sleep_queue->sleep_queue_next;
                 t->sleep_queue_next = NULL;
             }
         }
@@ -149,8 +151,8 @@ avr_thread_init(uint16_t main_stack_size, uint8_t main_priority)
     // TODO
     // Number of threads allowed
 
-    run_queue = NULL;
-    sleeping_queue = NULL;
+    avr_thread_run_queue = NULL;
+    avr_thread_sleep_queue = NULL;
 
     for (i = 0; i < MAX_NUM_THREADS; ++i) {
         avr_thread_threads[i].state = ats_invalid;
@@ -160,12 +162,11 @@ avr_thread_init(uint16_t main_stack_size, uint8_t main_priority)
     avr_thread_idle_context = avr_thread_create(avr_thread_idle_entry,
                                                 avr_thread_idle_stack,
                                                 sizeof
-                                                avr_thread_idle_stack,
+                                                (avr_thread_idle_stack),
                                                 atp_noromal);
 
-    take_run_queue(avr_thread_idle_context);
+    avr_thread_run_queue_remove(avr_thread_idle_context);
 
-    // TODO
     avr_thread_main_context = avr_thread_create(NULL, NULL,
                                                 main_stack_size,
                                                 atp_noromal);
@@ -213,7 +214,7 @@ avr_thread_create(void (*entry) (void), uint8_t * stack,
 
     avr_thread_init_thread(t, entry, stack, stack_size, priority);
 
-    put_run_queue(t);
+    avr_thread_run_queue_push(t);
 
     if (t->priority > avr_thread_active_context->priority) {
         avr_thread_yield();
@@ -231,13 +232,11 @@ avr_thread_init_thread(struct avr_thread_context *t, void (*entry) (void),
     uint8_t         i;
 
     if (stack == NULL) {
-        // TODO
         stack = (uint8_t *) (SP - stack_size - 2);
     }
 
     t->stack = stack;
     t->stack_size = stack_size;
-    // memset(t->stack, 0, stack_size);
     t->sp = &(t->stack[stack_size - 1]);
     *t->sp = (uint8_t) (uint16_t) entry;
     --(t->sp);
@@ -262,11 +261,11 @@ avr_thread_init_thread(struct avr_thread_context *t, void (*entry) (void),
 
 
 static void
-put_run_queue(struct avr_thread_context *t)
+avr_thread_run_queue_push(struct avr_thread_context *t)
 {
     struct avr_thread_context *r;
 
-    for (r = run_queue; r != NULL; r = r->run_queue_next) {
+    for (r = avr_thread_run_queue; r != NULL; r = r->run_queue_next) {
         if (t->priority > r->priority) {
             if (r->run_queue_prev != NULL) {
                 t->run_queue_prev = r->run_queue_prev;
@@ -274,7 +273,7 @@ put_run_queue(struct avr_thread_context *t)
                 r->run_queue_prev = t;
                 t->run_queue_next = r;
             } else {
-                run_queue = t;
+                avr_thread_run_queue = t;
                 t->run_queue_next = r;
                 t->run_queue_prev = NULL;
                 t->run_queue_next->run_queue_prev = t;
@@ -290,37 +289,36 @@ put_run_queue(struct avr_thread_context *t)
         }
     }
 
-    run_queue = t;
+    avr_thread_run_queue = t;
     t->run_queue_prev = NULL;
     t->run_queue_next = NULL;
 }
 
 static struct avr_thread_context *
-get_run_queue(void)
+avr_thread_run_queue_pop(void)
 {
     struct avr_thread_context *r;
 
-    if (run_queue != NULL) {
-        r = run_queue;
-        run_queue = r->run_queue_next;
-        if (run_queue != NULL) {
-            run_queue->run_queue_prev = NULL;
+    if (avr_thread_run_queue != NULL) {
+        r = avr_thread_run_queue;
+        avr_thread_run_queue = r->run_queue_next;
+        if (avr_thread_run_queue != NULL) {
+            avr_thread_run_queue->run_queue_prev = NULL;
         }
         r->run_queue_next = NULL;
         r->run_queue_prev = NULL;
         return r;
     }
-
-    return avr_thread_active_context;
-    // return NULL;
+    // return avr_thread_active_context;
+    return avr_thread_idle_context;
 }
 
 static void
-take_run_queue(struct avr_thread_context *t)
+avr_thread_run_queue_remove(struct avr_thread_context *t)
 {
     struct avr_thread_context *r;
 
-    for (r = run_queue; r != NULL; r = r->run_queue_next) {
+    for (r = avr_thread_run_queue; r != NULL; r = r->run_queue_next) {
         if (r == t) {
             if (r->run_queue_prev != NULL) {
                 r->run_queue_prev->run_queue_next = r->run_queue_next;
@@ -329,8 +327,8 @@ take_run_queue(struct avr_thread_context *t)
             if (r->run_queue_next) {
                 r->run_queue_next->run_queue_prev = r->run_queue_prev;
             }
-            if (r == run_queue) {
-                run_queue = r->run_queue_next;
+            if (r == avr_thread_run_queue) {
+                avr_thread_run_queue = r->run_queue_next;
             }
             r->run_queue_next = NULL;
             r->run_queue_next = NULL;
@@ -340,20 +338,20 @@ take_run_queue(struct avr_thread_context *t)
 }
 
 static void
-take_sleeping_queue(struct avr_thread_context *t)
+avr_thread_sleep_queue_remove(struct avr_thread_context *t)
 {
     struct avr_thread_context *r,
                    *p;
 
     p = NULL;
-    r = sleeping_queue;
+    r = avr_thread_sleep_queue;
     while (r) {
         if (r == t) {
             if (t->sleep_queue_next) {
                 t->sleep_queue_next->sleep_timer += t->sleep_timer;
             }
-            if (sleeping_queue == t) {
-                sleeping_queue = t->sleep_queue_next;
+            if (avr_thread_sleep_queue == t) {
+                avr_thread_sleep_queue = t->sleep_queue_next;
             }
             if (p != NULL) {
                 p->sleep_queue_next = r->sleep_queue_next;
@@ -372,8 +370,8 @@ avr_thread_stop(struct avr_thread_context *t)
     ints = SREG & 0x80;
     cli();
 
-    take_run_queue(t);
-    take_sleeping_queue(t);
+    avr_thread_run_queue_remove(t);
+    avr_thread_sleep_queue_remove(t);
     t->state = ats_stopped;
 
     if (avr_thread_active_context == t) {
@@ -390,8 +388,8 @@ avr_thread_pause(struct avr_thread_context *t)
     ints = SREG & 0x80;
     cli();
 
-    take_run_queue(t);
-    take_sleeping_queue(t);
+    avr_thread_run_queue_remove(t);
+    avr_thread_sleep_queue_remove(t);
     t->state = ats_paused;
 
     if (t == avr_thread_active_context) {
@@ -415,7 +413,7 @@ avr_thread_resume(struct avr_thread_context *t)
     cli();
 
     t->state = ats_runnable;
-    put_run_queue(t);
+    avr_thread_run_queue_push(t);
 
     if (t->priority > avr_thread_active_context->priority) {
         avr_thread_yield();
@@ -434,12 +432,13 @@ avr_thread_yield(void)
     cli();
 
     if (avr_thread_active_context->state == ats_runnable) {
-        put_run_queue(avr_thread_active_context);
+        avr_thread_run_queue_push(avr_thread_active_context);
     }
 
-    t = get_run_queue();
+    t = avr_thread_run_queue_pop();
 
     if (t == avr_thread_active_context) {
+        // Reset the tick
         avr_thread_active_context->ticks =
             avr_thread_active_context->quantum;
     } else {
