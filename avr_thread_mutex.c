@@ -178,3 +178,4 @@ avr_thread_mutex_release(struct avr_thread_mutex *mutex)
     SREG = sreg;
     return;
 }
+

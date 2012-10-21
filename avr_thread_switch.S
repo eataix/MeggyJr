@@ -87,3 +87,4 @@ avr_thread_switch_to:
     out _SFR_IO_ADDR(SREG),r0
     pop r0
     reti
+

@@ -110,3 +110,4 @@ void            avr_thread_mutex_acquire(struct avr_thread_mutex *mutex);
 void            avr_thread_mutex_release(struct avr_thread_mutex *mutex);
 
 #endif
+

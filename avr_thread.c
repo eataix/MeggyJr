@@ -460,3 +460,4 @@ avr_thread_save_sp(uint8_t * sp)
     sp += 2;
     avr_thread_prev_context->sp = sp;
 }
+
