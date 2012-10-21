@@ -67,7 +67,7 @@ meggyjr_set_pixel_color(byte x, byte y, byte * rgb)
 {
     byte            pixelPtr;
 
-    pixelPtr = 24 * x + y;
+    pixelPtr = (byte) 24 *x + y;
     frame[pixelPtr] = rgb[2];
     pixelPtr += 8;
     frame[pixelPtr] = rgb[1];
@@ -142,7 +142,7 @@ meggyjr_set_sound_state(byte t)
     }
 }
 
-static uint8_t num_redraws = 0;
+static uint8_t  num_redraws = 0;
 
 /**
  * ISR
@@ -354,4 +354,3 @@ meggyjr_delay(uint16_t ms)
         }
     }
 }
-

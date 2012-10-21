@@ -43,13 +43,13 @@ struct avr_thread_mutex {
     struct avr_thread_context *waiting;
 };
 
-struct avr_thread_mutex_basic {
+struct avr_thread_basic_mutex {
     uint8_t         locked;
 };
 
 struct avr_thread_semaphore {
     uint8_t         lock_count;
-    struct avr_thread_mutex_basic *mutex;
+    struct avr_thread_basic_mutex *mutex;
 };
 
 extern struct avr_thread_context *avr_thread_active_context;
@@ -61,6 +61,7 @@ struct avr_thread_context *avr_thread_create(void (*entry) (void),
                                              uint8_t * stack,
                                              uint16_t stack_size,
                                              uint8_t priority);
+
 void            avr_thread_sleep(uint16_t ms);
 
 void            avr_thread_yield(void);
@@ -81,18 +82,18 @@ void            avr_thread_save_sp(uint8_t * sp);
  */
 
 // Basic mutex
-struct avr_thread_mutex_basic *avr_thread_mutex_basic_create(void);
+struct avr_thread_basic_mutex *avr_thread_basic_mutex_create(void);
 
-void            avr_thread_mutex_basic_destory(struct
-                                               avr_thread_mutex_basic
+void            avr_thread_basic_mutex_destory(struct
+                                               avr_thread_basic_mutex
                                                *mutex);
 
-void            avr_thread_mutex_acquire_basic(struct
-                                               avr_thread_mutex_basic
+void            avr_thread_basic_mutex_acquire(struct
+                                               avr_thread_basic_mutex
                                                *mutex);
 
-void            avr_thread_mutex_release_basic(struct
-                                               avr_thread_mutex_basic
+void            avr_thread_basic_mutex_release(struct
+                                               avr_thread_basic_mutex
                                                *mutex);
 
 // Semaphores
@@ -110,5 +111,22 @@ void            avr_thread_mutex_acquire(struct avr_thread_mutex *mutex);
 
 void            avr_thread_mutex_release(struct avr_thread_mutex *mutex);
 
-#endif
+struct avr_thread_mutex_rw_lock
+               *avr_thread_mutex_rw_create(void);
 
+void            avr_thread_mutex_rw_destroy(struct avr_thread_mutex_rw_lock
+                                            *rwlock);
+
+void            avr_thread_mutex_rw_rlock(struct avr_thread_mutex_rw_lock
+                                          *rwlock);
+
+void            avr_thread_mutex_rw_runlock(struct avr_thread_mutex_rw_lock
+                                            *rwlock);
+
+void            avr_thread_mutex_rw_wlock(struct avr_thread_mutex_rw_lock
+                                          *rwlock);
+
+void            avr_thread_mutex_rw_wunlock(struct avr_thread_mutex_rw_lock
+                                            *rwlock);
+
+#endif

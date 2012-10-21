@@ -140,10 +140,15 @@ HEXFORMAT=ihex
 CFLAGS=-I. $(INC) -g -mmcu=$(MCU) -O$(OPTLEVEL) \
 	-fpack-struct -fshort-enums             \
 	-funsigned-bitfields -funsigned-char    \
-	-DF_CPU=16000000UL                      \
-	-Wall -Wstrict-prototypes               \
+	-DF_CPU=16000000UL                       \
+	-Wall -Wstrict-prototypes                \
+	-Wextra -Wshadow           \
+	-Wpointer-arith -Wcast-qual -Wcast-align \
+	-Wstrict-prototypes -Wmissing-prototypes \
 	-Wa,-ahlms=$(firstword                  \
 	$(filter %.lst, $(<:.c=.lst)))
+
+	#-Wconversion \
 
 # c++ specific flags
 CPPFLAGS=-fno-exceptions               \

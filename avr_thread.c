@@ -169,7 +169,7 @@ avr_thread_init(uint16_t main_stack_size, uint8_t main_priority)
 
     avr_thread_main_context = avr_thread_create(NULL, NULL,
                                                 main_stack_size,
-                                                atp_noromal);
+                                                main_priority);
 
     avr_thread_prev_context = avr_thread_main_context;
     avr_thread_active_context = avr_thread_idle_context;
@@ -459,4 +459,3 @@ avr_thread_save_sp(uint8_t * sp)
     sp += 2;
     avr_thread_prev_context->sp = sp;
 }
-

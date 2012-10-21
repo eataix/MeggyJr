@@ -86,7 +86,6 @@ meggyjr_check_button_down(void)
 void
 meggyjr_check_button_pressed(void)
 {
-    byte            j;
     byte            i = meggyjr_get_button();
 
     meggyjr_button_b = (i & 1);
@@ -167,12 +166,13 @@ meggyjr_tone_start(unsigned int divisor, unsigned int duration_ms)
 }
 
 void
-meggyjr_sound_on(void)
+meggyjr_sound_enable(void)
 {
     meggyjr_set_sound_state(1);
 }
+
 void
-meggyjr_sound_off(void)
+meggyjr_sound_disable(void)
 {
     meggyjr_set_sound_state(0);
 }
@@ -184,6 +184,5 @@ meggyjr_setup(void)
     meggyjr_clear_frame();
     last_button_state = meggyjr_get_button();
     // StartTone(0, 0);
-    meggyjr_sound_off();
+    meggyjr_sound_disable();
 }
-
