@@ -1,5 +1,5 @@
-#include "MeggyJrLib.h"
-#include "MeggyJr.h"
+#include "meggyjr.h"
+#include "meggyjr_basic.h"
 
 byte            meggyjr_button_a;
 byte            meggyjr_button_b;
