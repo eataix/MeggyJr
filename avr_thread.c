@@ -309,7 +309,6 @@ avr_thread_run_queue_pop(void)
         r->run_queue_prev = NULL;
         return r;
     }
-    // return avr_thread_active_context;
     return avr_thread_idle_context;
 }
 

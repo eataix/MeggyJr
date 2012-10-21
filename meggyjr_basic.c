@@ -142,6 +142,8 @@ meggyjr_set_sound_state(byte t)
     }
 }
 
+static uint8_t num_redraws = 0;
+
 /**
  * ISR
  *
@@ -157,7 +159,11 @@ SIGNAL(TIMER2_COMPA_vect)
         if (current_column > 7) {
             current_column = 0;
             current_column_ptr = frame;
-            avr_thread_tick();
+            ++num_redraws;
+            if (num_redraws == FPS / FIRE_PER_SEC) {
+                avr_thread_tick();
+                num_redraws = 0;
+            }
         } else {
             current_column_ptr += 24;   // 3 * 8
         }
