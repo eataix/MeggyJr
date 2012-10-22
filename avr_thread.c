@@ -48,9 +48,6 @@ static void     avr_thread_init_thread(struct avr_thread_context *t,
                                        uint8_t priority);
 
 static void     avr_thread_self_deconstruct(void);
-/*
- * Functions definitions
- */
 
 /*
  * Let the current active thread sleep for `ticks' ticks.
@@ -65,8 +62,6 @@ avr_thread_sleep(uint16_t ticks)
 
     ints = SREG & 0x80;
     cli();
-
-    avr_thread_active_context->state = ats_sleeping;
 
     /*
      * Sleep queue is empty.
@@ -108,6 +103,7 @@ avr_thread_sleep(uint16_t ticks)
     avr_thread_active_context->sleep_ticks = ticks;
 
   _exit_from_sleep:
+    avr_thread_active_context->state = ats_sleeping;
     avr_thread_yield();
     SREG |= ints;
     return;
@@ -148,6 +144,7 @@ avr_thread_tick(void)
     }
 
     if (should_yield == 1) {
+        avr_thread_active_context->state = ats_runnable;
         avr_thread_yield();
     } else {
         --(avr_thread_active_context->ticks);
@@ -166,6 +163,9 @@ avr_thread_idle_entry(void)
     }
 }
 
+/*
+ * Destruct the active thread.
+ */
 static void
 avr_thread_self_deconstruct(void)
 {
@@ -175,12 +175,14 @@ avr_thread_self_deconstruct(void)
     avr_thread_sleep_queue_remove(avr_thread_active_context);
 
     t = avr_thread_active_context->next_joined;
+
     while (t != NULL) {
         t->state = ats_runnable;
         avr_thread_run_queue_push(t);
         t = t->next_joined;
     }
 
+    avr_thread_active_context->state = ats_invalid;
     avr_thread_yield();
 }
 
@@ -242,7 +244,6 @@ avr_thread_create(void (*entry) (void), uint8_t * stack,
 
     for (i = 0; i < MAX_NUM_THREADS; ++i) {
         if (avr_thread_threads[i].state == ats_invalid) {
-            avr_thread_threads[i].state = ats_runnable;
             break;
         }
     }
@@ -253,10 +254,9 @@ avr_thread_create(void (*entry) (void), uint8_t * stack,
     }
 
     t = &(avr_thread_threads[i]);
-
     avr_thread_init_thread(t, entry, stack, stack_size, priority);
-
     avr_thread_run_queue_push(t);
+    avr_thread_threads[i].state = ats_runnable;
 
     if (t->priority > avr_thread_active_context->priority) {
         avr_thread_yield();
@@ -424,12 +424,17 @@ avr_thread_sleep_queue_remove(struct avr_thread_context *t)
 void
 avr_thread_exit(void)
 {
-    avr_thread_self_deconstruct();
+    /*
+     * Cannot exit the main thread.
+     */
+    if (avr_thread_active_context != avr_thread_main_context) {
+        avr_thread_self_deconstruct();
+    }
 }
 
-/**
+/*
  * Cancel a thread.
- * Make it as canceled and move on.
+ * Make it as cancelled and move on.
  */
 void
 avr_thread_cancel(struct avr_thread_context *t)
@@ -468,7 +473,6 @@ avr_thread_pause(struct avr_thread_context *t)
     avr_thread_run_queue_remove(t);
     avr_thread_sleep_queue_remove(t);
     t->state = ats_paused;
-
     if (t == avr_thread_active_context) {
         avr_thread_yield();
     }
@@ -481,17 +485,15 @@ avr_thread_resume(struct avr_thread_context *t)
 {
     uint8_t         ints;
 
-    // TODO
-    if (t == NULL || t == avr_thread_active_context) {
+    if (t == NULL || t->state != ats_paused) {
         return;
     }
 
     ints = SREG & 0x80;
     cli();
 
-    t->state = ats_runnable;
     avr_thread_run_queue_push(t);
-
+    t->state = ats_runnable;
     if (t->priority > avr_thread_active_context->priority) {
         avr_thread_yield();
     }
@@ -556,7 +558,6 @@ avr_thread_join(struct avr_thread_context *t)
     if (t == NULL || t->state == ats_invalid) {
         return;
     }
-    avr_thread_active_context->state = ats_joined;
 
     for (p = NULL, c = t->next_joined; c != NULL;
          p = c, c = c->next_joined) {
@@ -570,6 +571,7 @@ avr_thread_join(struct avr_thread_context *t)
         p->next_joined = avr_thread_active_context;
     }
 
+    avr_thread_active_context->state = ats_joined;
     avr_thread_yield();
 
     SREG |= ints;
