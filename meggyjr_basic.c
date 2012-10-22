@@ -266,7 +266,7 @@ SIGNAL(TIMER2_COMPA_vect)
     }
 
     while (!(SPSR && (1 << SPIF))) {
-        // Spin;
+        // First Spin;
     }
     SPDR = bits;
 
@@ -305,7 +305,7 @@ SIGNAL(TIMER2_COMPA_vect)
     }
 
     while (!(SPSR && (1 << SPIF))) {
-        // Spin;
+        // Second Spin;
     }
     SPDR = bits;
 
@@ -321,7 +321,7 @@ SIGNAL(TIMER2_COMPA_vect)
     }
 
     while (!(SPSR && (1 << SPIF))) {
-        // Spin;
+        // Third Spin;
     }
 
     PORTB |= 4;
