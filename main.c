@@ -32,35 +32,35 @@ int             tune_lose[] =
 byte            tune_note;
 
 
-void loop(void);
+void            loop(void);
 
-void blink_player(void);
+void            blink_player(void);
 
-void draw_splash(void);
+void            draw_splash(void);
 
-void flash_screen(int n, int ms);
+void            flash_screen(int n, int ms);
 
-void clear_board(void);
+void            clear_board(void);
 
-void draw_board(void);
+void            draw_board(void);
 
-void swipe_image(byte * new_image);
+void            swipe_image(byte * new_image);
 
-void heavy(void);
+void            heavy(void);
 
-void next_player(void);
+void            next_player(void);
 
-uint8_t check_four(byte i, byte j);
+uint8_t         check_four(byte i, byte j);
 
-void flash_four(void);
+void            flash_four(void);
 
-void player_move(void);
+void            player_move(void);
 
-void computer_move(void);
+void            computer_move(void);
 
-int get_score(byte col, byte depth);
+int             get_score(byte col, byte depth);
 
-void update_auxleds(void);
+void            update_auxleds(void);
 
 int
 main(void)
@@ -442,7 +442,7 @@ player_move(void)
 
         if (sound) {
             meggyjr_tone_start(ToneF5 + (((ToneA5 - ToneF5) / 6) * depth),
-                                50);
+                               50);
         }
     }
 
@@ -485,7 +485,7 @@ computer_move(void)
     int             max_score;
 
     if (n_move < 1) {
-        col = 3; // TODO
+        col = 3;                // TODO
         for (; xc > 1; --xc) {
             meggyjr_draw(xc, yc, Dark);
             meggyjr_draw(xc - 1, yc, player_colors[player]);
@@ -613,4 +613,3 @@ update_auxleds(void)
     }
     meggyjr_set_led(i);
 }
-

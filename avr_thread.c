@@ -110,49 +110,47 @@ avr_thread_sleep(uint16_t ticks)
 }
 
 void
-avr_thread_tick(void)
+avr_thread_tick(uint16_t * saved_sp)
 {
-    uint8_t         should_yield;
+    uint16_t       *new_sp;
     struct avr_thread_context *t;
 
-    should_yield = 0;
+    // TODO for idle
+    avr_thread_active_context->sp = saved_sp;
 
     /*
      * Check if any sleeping thread can be waken.
      */
     if (avr_thread_sleep_queue != NULL) {
         --(avr_thread_sleep_queue->sleep_ticks);
-        if (avr_thread_sleep_queue->sleep_ticks == 0) {
-            while (avr_thread_sleep_queue != NULL &&
-                   avr_thread_sleep_queue->sleep_ticks == 0) {
-                avr_thread_sleep_queue->state = ats_runnable;
-                avr_thread_run_queue_push(avr_thread_sleep_queue);
-                /*
-                 * If a thread that has higher priority is wakend,
-                 * switch to it.
-                 */
-                if (avr_thread_sleep_queue->priority >
-                    avr_thread_active_context->priority) {
-                    should_yield = 1;
-                }
-                t = avr_thread_sleep_queue;
-                avr_thread_sleep_queue =
-                    avr_thread_sleep_queue->sleep_queue_next;
-                t->sleep_queue_next = NULL;
-            }
+        while (avr_thread_sleep_queue != NULL &&
+               avr_thread_sleep_queue->sleep_ticks == 0) {
+            avr_thread_run_queue_push(avr_thread_sleep_queue);
+            t = avr_thread_sleep_queue;
+            avr_thread_sleep_queue =
+                avr_thread_sleep_queue->sleep_queue_next;
+            t->sleep_queue_next = NULL;
         }
     }
 
-    if (should_yield == 1) {
-        avr_thread_active_context->state = ats_runnable;
-        avr_thread_yield();
+    /*
+     * Peek at the run queue if there is a thread with higher priority, switch
+     * to it.
+     */
+    if (avr_thread_run_queue->priority >
+        avr_thread_active_context->priority) {
+        avr_thread_run_queue_push(avr_thread_active_context);
+        avr_thread_active_context = avr_thread_run_queue;
+        avr_thread_run_queue = avr_thread_run_queue->run_queue_next;
     } else {
         --(avr_thread_active_context->ticks);
         if (avr_thread_active_context->ticks == 0) {
-            avr_thread_active_context->state = ats_runnable;
-            avr_thread_yield();
+            avr_thread_run_queue_push(avr_thread_active_context);
+            avr_thread_active_context = avr_thread_run_queue_pop();
         }
     }
+
+    return avr_thread_active_context->sp;
 }
 
 static void

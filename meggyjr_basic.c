@@ -149,9 +149,49 @@ static uint8_t  num_redraws = 0;
  *
  * Here is the ISR.
  **/
-SIGNAL(TIMER2_COMPA_vect)
+ISR(TIMER2_COMPA_vect, ISR_NAKED)
 {
-    cli();
+    uint16_t       *saved_sp,
+                   *new_sp;
+
+    __asm__("push r0");
+    __asm__("in r0,_SFR_IO_ADDR(SREG)");
+    __asm__("push r0");
+    __asm__("cli");
+    __asm__("push r1");
+    __asm__("push r2");
+    __asm__("push r3");
+    __asm__("push r4");
+    __asm__("push r5");
+    __asm__("push r6");
+    __asm__("push r7");
+    __asm__("push r8");
+    __asm__("push r9");
+    __asm__("push r10");
+    __asm__("push r11");
+    __asm__("push r12");
+    __asm__("push r13");
+    __asm__("push r14");
+    __asm__("push r15");
+    __asm__("push r16");
+    __asm__("push r17");
+    __asm__("push r18");
+    __asm__("push r19");
+    __asm__("push r20");
+    __asm__("push r21");
+    __asm__("push r22");
+    __asm__("push r23");
+    __asm__("push r24");
+    __asm__("push r25");
+    __asm__("push r26");
+    __asm__("push r27");
+    __asm__("push r28");
+    __asm__("push r29");
+    __asm__("push r30");
+    __asm__("push r31");
+
+    saved_sp = SP;
+    new_sp = saved_sp;
 
     if (++current_brightness >= MAX_BT) {
         current_brightness = 0;
@@ -161,8 +201,9 @@ SIGNAL(TIMER2_COMPA_vect)
             current_column_ptr = frame;
             ++num_redraws;
             if (num_redraws == FPS / FIRE_PER_SEC) {
-                avr_thread_tick();
                 num_redraws = 0;
+                new_sp = avr_thread_tick(saved_sp);
+                goto isr_done;
             }
         } else {
             current_column_ptr += 24;   // 3 * 8
@@ -336,8 +377,43 @@ SIGNAL(TIMER2_COMPA_vect)
 
     SPCR = 0;
 
-    // TODO
-    sei();
+  isr_done:
+    SP = new_sp;
+    __asm__("pop r31");
+    __asm__("pop r30");
+    __asm__("pop r29");
+    __asm__("pop r28");
+    __asm__("pop r27");
+    __asm__("pop r26");
+    __asm__("pop r25");
+    __asm__("pop r24");
+    __asm__("pop r23");
+    __asm__("pop r22");
+    __asm__("pop r21");
+    __asm__("pop r20");
+    __asm__("pop r19");
+    __asm__("pop r18");
+    __asm__("pop r17");
+    __asm__("pop r16");
+    __asm__("pop r15");
+    __asm__("pop r14");
+    __asm__("pop r13");
+    __asm__("pop r12");
+    __asm__("pop r11");
+    __asm__("pop r10");
+    __asm__("pop r9");
+    __asm__("pop r8");
+    __asm__("pop r7");
+    __asm__("pop r6");
+    __asm__("pop r5");
+    __asm__("pop r4");
+    __asm__("pop r3");
+    __asm__("pop r2");
+    __asm__("pop r1");
+    __asm__("pop r0");
+    __asm__("out _SFR_IO_ADDR(SREG),r0");
+    __asm__("pop r0");
+    __asm__("reti");
 }
 
 // TODO
