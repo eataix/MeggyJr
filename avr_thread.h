@@ -16,7 +16,8 @@ enum avr_thread_state {
     ats_paused,
     ats_sleeping,
     ats_joined,
-    ats_cancelled
+    ats_cancelled,
+    ats_waiting
 };
 
 enum avr_thread_priority {
@@ -35,27 +36,31 @@ struct avr_thread_context {
     struct avr_thread_context *run_queue_prev;
     struct avr_thread_context *run_queue_next;
     struct avr_thread_context *sleep_queue_next;
-    struct avr_thread_context *next_waiting;
     struct avr_thread_context *next_joined;
-    void           *waiting_for;
-};
-
-struct avr_thread_mutex {
-    uint8_t         lock_count;
-    struct avr_thread_context *owner;
-    struct avr_thread_context *waiting;
+    struct avr_thread_context *wait_queue_next;
+#ifdef DEBUG
+    void           *waiting_for;        // a mutex or a semaphore.
+#endif
 };
 
 struct avr_thread_basic_mutex {
     uint8_t         locked;
+    struct avr_thread_context *wait_queue;
 };
 
 struct avr_thread_semaphore {
     uint8_t         lock_count;
     struct avr_thread_basic_mutex *mutex;
+    struct avr_thread_context *wait_queue;
 };
 
-extern struct avr_thread_context *avr_thread_active_context;
+struct avr_thread_mutex_rw_lock {
+    struct avr_thread_basic_mutex *mutex;
+    struct avr_thread_semaphore *writeSem;
+    struct avr_thread_semaphore *readerSem;
+    int8_t          readerCount;
+    int8_t          readerWait;
+};
 
 struct avr_thread_context *avr_thread_init(uint16_t main_stack_size,
                                            uint8_t main_priority);
@@ -64,6 +69,11 @@ struct avr_thread_context *avr_thread_create(void (*entry) (void),
                                              uint8_t * stack,
                                              uint16_t stack_size,
                                              uint8_t priority);
+#ifdef _EXPORT_INTERNAL
+extern struct avr_thread_context *avr_thread_active_context;
+
+void            avr_thread_run_queue_push(struct avr_thread_context *t);
+#endif
 
 void            avr_thread_sleep(uint16_t ticks);
 

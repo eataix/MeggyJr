@@ -314,7 +314,7 @@ avr_thread_init_thread(struct avr_thread_context *t, void (*entry) (void),
     return;
 }
 
-static void
+void
 avr_thread_run_queue_push(struct avr_thread_context *t)
 {
     struct avr_thread_context *r;
