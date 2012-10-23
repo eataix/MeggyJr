@@ -3,6 +3,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+#define _EXPORT_INTERNAL
 #include "avr_thread.h"
 
 #define IDLE_THREAD_STACK_SIZE 64
@@ -28,8 +29,6 @@ static struct avr_thread_context avr_thread_threads[MAX_NUM_THREADS];
  * Prototypes
  */
 void            avr_thread_switch_to(uint8_t * new_stack_pointer);
-
-static void     avr_thread_run_queue_push(struct avr_thread_context *t);
 
 static struct avr_thread_context
                *avr_thread_run_queue_pop(void);
@@ -109,10 +108,9 @@ avr_thread_sleep(uint16_t ticks)
     return;
 }
 
-void
-avr_thread_tick(uint16_t * saved_sp)
+uint8_t        *
+avr_thread_tick(uint8_t * saved_sp)
 {
-    uint16_t       *new_sp;
     struct avr_thread_context *t;
 
     // TODO for idle

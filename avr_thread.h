@@ -73,6 +73,8 @@ struct avr_thread_context *avr_thread_create(void (*entry) (void),
 extern struct avr_thread_context *avr_thread_active_context;
 
 void            avr_thread_run_queue_push(struct avr_thread_context *t);
+
+void            avr_thread_run_queue_push(struct avr_thread_context *t);
 #endif
 
 void            avr_thread_sleep(uint16_t ticks);
@@ -83,7 +85,7 @@ void            avr_thread_pause(struct avr_thread_context *t);
 
 void            avr_thread_resume(struct avr_thread_context *t);
 
-void            avr_thread_tick(void);
+uint8_t        *avr_thread_tick(uint8_t * saved_sp);
 
 void            avr_thread_save_sp(uint8_t * sp);
 
@@ -121,11 +123,6 @@ void            avr_thread_semaphore_destroy(struct avr_thread_semaphore
 void            avr_thread_sem_up(struct avr_thread_semaphore *sem);
 
 void            avr_thread_sem_down(struct avr_thread_semaphore *sem);
-
-// Mutex
-void            avr_thread_mutex_acquire(struct avr_thread_mutex *mutex);
-
-void            avr_thread_mutex_release(struct avr_thread_mutex *mutex);
 
 struct avr_thread_mutex_rw_lock
                *avr_thread_mutex_rw_create(void);

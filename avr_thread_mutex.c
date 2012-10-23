@@ -181,7 +181,7 @@ avr_thread_sem_up(struct avr_thread_semaphore *sem)
      */
     if (sem->wait_queue != NULL) {
         sem->wait_queue->state = ats_runnable;
-        avr_thread_run_queue_push(sem->wait_queue->state);
+        avr_thread_run_queue_push(sem->wait_queue);
         sem->wait_queue = sem->wait_queue->wait_queue_next;
     }
 
@@ -260,7 +260,7 @@ struct avr_thread_mutex_rw_lock *
 avr_thread_mutex_rw_create(void)
 {
     struct avr_thread_mutex_rw_lock *r;
-    r = malloc(sizeof(struct avr_thread_mutex));
+    r = malloc(sizeof(struct avr_thread_mutex_rw_lock));
     if (r == NULL) {
         return NULL;
     }
