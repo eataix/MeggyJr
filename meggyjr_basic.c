@@ -151,7 +151,9 @@ static uint8_t  num_redraws = 0;
  **/
 ISR(TIMER2_COMPA_vect, ISR_NAKED)
 {
-    uint8_t         sp;
+    uint8_t        *saved_sp,
+                   *new_sp;
+
     __asm__("push r0");
     __asm__("in r0,__SREG__");
     __asm__("push r0");
@@ -187,11 +189,18 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
     __asm__("push r29");
     __asm__("push r30");
     __asm__("push r31");
+
     /*
-     * __asm__("in r28, 0x3d"); __asm__("in r29, 0x3e"); __asm__("sbiw
-     * r28, 0x07"); __asm__("out 0x3e, r29"); __asm__("out 0x3d, r28"); 
+     * THIS IS MAGIC!!!
      */
-    sp = SP;
+    __asm__("in r28, 0x3d");
+    __asm__("in r29, 0x3e");
+    __asm__("sbiw r28, 0x0b");
+    __asm__("out 0x3e, r29");
+    __asm__("out 0x3d, r28");
+
+    saved_sp = SP;
+    new_sp = saved_sp;
 
     if (++current_brightness >= MAX_BT) {
         current_brightness = 0;
@@ -202,6 +211,8 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
             ++num_redraws;
             if (num_redraws == FPS / FIRE_PER_SEC) {
                 num_redraws = 0;
+                new_sp = avr_thread_tick(saved_sp);
+                goto isr_done;
             }
         } else {
             current_column_ptr += 24;   // 3 * 8
@@ -376,12 +387,12 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
     SPCR = 0;
 
   isr_done:
-    /*
-     * __asm__("adiw r28, 0x07"); __asm__("out 0x3e, r29"); __asm__("out
-     * 0x3d, r28"); 
-     */
+    SP = new_sp;
 
-    SP = sp;
+    __asm__("adiw r28, 0x0b");
+    __asm__("out 0x3e, r29");
+    __asm__("out 0x3d, r28");
+
     __asm__("pop r31");
     __asm__("pop r30");
     __asm__("pop r29");
