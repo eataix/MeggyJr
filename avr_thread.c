@@ -84,7 +84,6 @@ avr_thread_sleep(uint16_t ticks)
             if (p != NULL) {
                 p->sleep_queue_next = avr_thread_active_context;
             } else {
-                // Unlikely to happen
                 avr_thread_sleep_queue = avr_thread_active_context;
             }
             goto _exit_from_sleep;
@@ -123,6 +122,7 @@ avr_thread_tick(uint8_t * saved_sp)
         --(avr_thread_sleep_queue->sleep_ticks);
         while (avr_thread_sleep_queue != NULL &&
                avr_thread_sleep_queue->sleep_ticks == 0) {
+            avr_thread_sleep_queue->state = ats_runnable;
             avr_thread_run_queue_push(avr_thread_sleep_queue);
             t = avr_thread_sleep_queue;
             avr_thread_sleep_queue =
@@ -132,17 +132,21 @@ avr_thread_tick(uint8_t * saved_sp)
     }
 
     /*
-     * Peek at the run queue if there is a thread with higher priority, switch
-     * to it.
+     * Peek at the run queue if there is a thread with higher priority,
+     * switch to it.
      */
     if (avr_thread_run_queue->priority >
         avr_thread_active_context->priority) {
+        /*
+         * Warning: starvation is highly possible.
+         */
+        avr_thread_active_context->ticks = QUANTUM;
         avr_thread_run_queue_push(avr_thread_active_context);
-        avr_thread_active_context = avr_thread_run_queue;
-        avr_thread_run_queue = avr_thread_run_queue->run_queue_next;
+        avr_thread_active_context = avr_thread_run_queue_pop();
     } else {
         --(avr_thread_active_context->ticks);
-        if (avr_thread_active_context->ticks == 0) {
+        if (avr_thread_active_context->ticks <= 0) {
+            avr_thread_active_context->ticks = QUANTUM;
             avr_thread_run_queue_push(avr_thread_active_context);
             avr_thread_active_context = avr_thread_run_queue_pop();
         }
@@ -254,9 +258,10 @@ avr_thread_create(void (*entry) (void), uint8_t * stack,
     avr_thread_run_queue_push(t);
     avr_thread_threads[i].state = ats_runnable;
 
-    if (t->priority > avr_thread_active_context->priority) {
-        avr_thread_yield();
-    }
+    /*
+     * if (t->priority > avr_thread_active_context->priority) {
+     * avr_thread_yield(); } 
+     */
 
     SREG |= ints;
     return t;
@@ -359,6 +364,7 @@ avr_thread_run_queue_pop(void)
         r->run_queue_prev = NULL;
         return r;
     }
+
     /*
      * Run the idle thread if the run queue is empty.
      */
@@ -490,6 +496,7 @@ avr_thread_resume(struct avr_thread_context *t)
 
     avr_thread_run_queue_push(t);
     t->state = ats_runnable;
+
     if (t->priority > avr_thread_active_context->priority) {
         avr_thread_yield();
     }
@@ -506,9 +513,10 @@ avr_thread_yield(void)
     ints = SREG & 0x80;
     cli();
 
-    if (avr_thread_active_context->state == ats_runnable) {
-        avr_thread_run_queue_push(avr_thread_active_context);
-    }
+    /*
+     * if (avr_thread_active_context->state == ats_runnable) {
+     * avr_thread_run_queue_push(avr_thread_active_context); } 
+     */
 
     t = avr_thread_run_queue_pop();
 

@@ -1,13 +1,11 @@
 #include <avr/io.h>
 
     .section .text
-
     .global avr_thread_switch_to
-
 avr_thread_switch_to:
-    cli
     push r0
-    in r0,_SFR_IO_ADDR(SREG)
+    in r0, _SFR_IO_ADDR(SREG)
+    cli
     push r0
     push r1
     push r2
@@ -40,17 +38,18 @@ avr_thread_switch_to:
     push r29
     push r30
     push r31
+    eor r1, r1
 
     push r24
     push r25
-    in r24,_SFR_IO_ADDR(SPL)
-    in r25,_SFR_IO_ADDR(SPH)
+    in r24, _SFR_IO_ADDR(SPL)
+    in r25, _SFR_IO_ADDR(SPH)
     call avr_thread_save_sp
     pop r25
     pop r24
 
-    out _SFR_IO_ADDR(SPL),r24
-    out _SFR_IO_ADDR(SPH),r25
+    out _SFR_IO_ADDR(SPL), r24
+    out _SFR_IO_ADDR(SPH), r25
 
     pop r31
     pop r30
@@ -84,6 +83,7 @@ avr_thread_switch_to:
     pop r2
     pop r1
     pop r0
-    out _SFR_IO_ADDR(SREG),r0
+    out _SFR_IO_ADDR(SREG), r0
     pop r0
-    ret
+    reti
+
