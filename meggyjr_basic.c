@@ -7,15 +7,15 @@
 
 #define F_CPU 16000000UL
 
-static byte     frame[DISP_BUFFER_SIZE];
-byte            leds;
+static volatile byte frame[DISP_BUFFER_SIZE];
+volatile byte   leds;
 
-static byte     current_column;
-static byte    *current_column_ptr;
-static byte     current_brightness;
+static volatile byte current_column;
+static volatile byte *current_column_ptr;
+static volatile byte current_brightness;
 
-static unsigned int tone_time_remaining;
-static byte     sound_enabled;
+static volatile unsigned int tone_time_remaining;
+static volatile byte sound_enabled;
 
 void
 meggyjr_init(void)
@@ -142,13 +142,13 @@ meggyjr_set_sound_state(byte t)
     }
 }
 
-static uint8_t  num_redraws = 0;
-static byte           *ptr;
-static byte            p;
-static byte            cb;
-static byte            bits;
-static byte            portbTemp;
-static byte            portdTemp;
+static volatile uint8_t num_redraws = 0;
+static byte    *ptr;
+static byte     p;
+static byte     cb;
+static byte     bits;
+static byte     portbTemp;
+static byte     portdTemp;
 
 /**
  * ISR

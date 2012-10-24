@@ -24,7 +24,8 @@ avr_thread_basic_mutex_create(void)
 }
 
 void
-avr_thread_basic_mutex_destory(struct avr_thread_basic_mutex *mutex)
+avr_thread_basic_mutex_destory(volatile struct avr_thread_basic_mutex
+                               *mutex)
 {
     uint8_t         sreg;
 
@@ -40,10 +41,11 @@ avr_thread_basic_mutex_destory(struct avr_thread_basic_mutex *mutex)
 }
 
 void
-avr_thread_basic_mutex_acquire(struct avr_thread_basic_mutex *mutex)
+avr_thread_basic_mutex_acquire(volatile struct avr_thread_basic_mutex
+                               *mutex)
 {
     uint8_t         sreg;
-    struct avr_thread_context *t,
+    volatile struct avr_thread_context *t,
                    *p;
 
     if (mutex == NULL) {
@@ -87,10 +89,11 @@ avr_thread_basic_mutex_acquire(struct avr_thread_basic_mutex *mutex)
 }
 
 void
-avr_thread_basic_mutex_release(struct avr_thread_basic_mutex *mutex)
+avr_thread_basic_mutex_release(volatile struct avr_thread_basic_mutex
+                               *mutex)
 {
     uint8_t         sreg = SREG;
-    struct avr_thread_context *p;
+    volatile struct avr_thread_context *p;
     cli();
 
     if (mutex != NULL && mutex->locked == 1) {
@@ -147,7 +150,7 @@ avr_thread_semaphore_create(int value)
  * semaphore.
  */
 void
-avr_thread_semaphore_destroy(struct avr_thread_semaphore *sem)
+avr_thread_semaphore_destroy(volatile struct avr_thread_semaphore *sem)
 {
     uint8_t         sreg;
     sreg = SREG;
@@ -165,7 +168,7 @@ avr_thread_semaphore_destroy(struct avr_thread_semaphore *sem)
 }
 
 void
-avr_thread_sem_up(struct avr_thread_semaphore *sem)
+avr_thread_sem_up(volatile struct avr_thread_semaphore *sem)
 {
     if (sem == NULL || sem->mutex == NULL) {
         /*
@@ -189,9 +192,9 @@ avr_thread_sem_up(struct avr_thread_semaphore *sem)
 }
 
 void
-avr_thread_sem_down(struct avr_thread_semaphore *sem)
+avr_thread_sem_down(volatile struct avr_thread_semaphore *sem)
 {
-    struct avr_thread_context *t,
+    volatile struct avr_thread_context *t,
                    *p;
     if (sem == NULL || sem->mutex == NULL) {
         /*
@@ -273,7 +276,8 @@ avr_thread_mutex_rw_create(void)
 }
 
 void
-avr_thread_mutex_rw_destroy(struct avr_thread_mutex_rw_lock *rwlock)
+avr_thread_mutex_rw_destroy(volatile struct avr_thread_mutex_rw_lock
+                            *rwlock)
 {
     if (rwlock == NULL) {
         return;
@@ -285,7 +289,7 @@ avr_thread_mutex_rw_destroy(struct avr_thread_mutex_rw_lock *rwlock)
 }
 
 void
-avr_thread_mutex_rw_rlock(struct avr_thread_mutex_rw_lock *rwlock)
+avr_thread_mutex_rw_rlock(volatile struct avr_thread_mutex_rw_lock *rwlock)
 {
     if (rwlock == NULL) {
         return;
@@ -296,7 +300,8 @@ avr_thread_mutex_rw_rlock(struct avr_thread_mutex_rw_lock *rwlock)
 }
 
 void
-avr_thread_mutex_rw_runlock(struct avr_thread_mutex_rw_lock *rwlock)
+avr_thread_mutex_rw_runlock(volatile struct avr_thread_mutex_rw_lock
+                            *rwlock)
 {
     if (rwlock == NULL) {
         return;
@@ -308,9 +313,8 @@ avr_thread_mutex_rw_runlock(struct avr_thread_mutex_rw_lock *rwlock)
     }
 }
 
-
 void
-avr_thread_mutex_rw_wlock(struct avr_thread_mutex_rw_lock *rwlock)
+avr_thread_mutex_rw_wlock(volatile struct avr_thread_mutex_rw_lock *rwlock)
 {
     int8_t          r;
 
@@ -324,7 +328,8 @@ avr_thread_mutex_rw_wlock(struct avr_thread_mutex_rw_lock *rwlock)
 }
 
 void
-avr_thread_mutex_rw_wunlock(struct avr_thread_mutex_rw_lock *rwlock)
+avr_thread_mutex_rw_wunlock(volatile struct avr_thread_mutex_rw_lock
+                            *rwlock)
 {
     int8_t          r,
                     i;

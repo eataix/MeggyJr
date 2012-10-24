@@ -9,12 +9,12 @@
                                         // like this.
 #define byte uint8_t
 
-extern byte     meggyjr_button_a;
-extern byte     meggyjr_button_b;
-extern byte     meggyjr_button_up;
-extern byte     meggyjr_button_down;
-extern byte     meggyjr_button_left;
-extern byte     meggyjr_button_right;
+extern volatile byte meggyjr_button_a;
+extern volatile byte meggyjr_button_b;
+extern volatile byte meggyjr_button_up;
+extern volatile byte meggyjr_button_down;
+extern volatile byte meggyjr_button_left;
+extern volatile byte meggyjr_button_right;
 
 
 // Assign those colors names that we can use:

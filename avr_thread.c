@@ -11,37 +11,40 @@
 /*
  * Variables
  */
-struct avr_thread_context *avr_thread_active_context;
+volatile struct avr_thread_context *avr_thread_active_context;
+
+static volatile struct avr_thread_context *avr_thread_prev_context;
+
+static volatile struct avr_thread_context *avr_thread_run_queue;
+
+static volatile struct avr_thread_context *avr_thread_sleep_queue;
 
 static struct avr_thread_context *avr_thread_main_context;
-static struct avr_thread_context *avr_thread_idle_context;
-
-static struct avr_thread_context *avr_thread_prev_context;
-
-static uint8_t  avr_thread_idle_stack[IDLE_THREAD_STACK_SIZE];
-
-static struct avr_thread_context *avr_thread_run_queue;
-static struct avr_thread_context *avr_thread_sleep_queue;
 
 static struct avr_thread_context avr_thread_threads[MAX_NUM_THREADS];
+
+static struct avr_thread_context *avr_thread_idle_context;
+
+static uint8_t  avr_thread_idle_stack[IDLE_THREAD_STACK_SIZE];
 
 /*
  * Prototypes
  */
 void            avr_thread_switch_to(uint8_t * new_stack_pointer);
 
-static struct avr_thread_context
+static volatile struct avr_thread_context
                *avr_thread_run_queue_pop(void);
 
-static void     avr_thread_run_queue_remove(struct avr_thread_context *t);
+static void     avr_thread_run_queue_remove(volatile struct
+                                            avr_thread_context *t);
 
-static void     avr_thread_sleep_queue_remove(struct avr_thread_context
+static void     avr_thread_sleep_queue_remove(volatile struct avr_thread_context
                                               *t);
 
 static void     avr_thread_idle_entry(void);
 
-static void     avr_thread_init_thread(struct avr_thread_context *t,
-                                       void (*entry) (void),
+static void     avr_thread_init_thread(volatile struct avr_thread_context
+                                       *t, void (*entry) (void),
                                        uint8_t * stack,
                                        uint16_t stack_size,
                                        uint8_t priority);
@@ -54,7 +57,7 @@ static void     avr_thread_self_deconstruct(void);
 void
 avr_thread_sleep(uint16_t ticks)
 {
-    struct avr_thread_context *t,
+    volatile struct avr_thread_context *t,
                    *p;
 
     uint8_t         ints;
@@ -110,7 +113,7 @@ avr_thread_sleep(uint16_t ticks)
 uint8_t        *
 avr_thread_tick(uint8_t * saved_sp)
 {
-    struct avr_thread_context *t;
+    volatile struct avr_thread_context *t;
 
     // TODO for idle
     avr_thread_active_context->sp = saved_sp;
@@ -177,7 +180,7 @@ avr_thread_idle_entry(void)
 static void
 avr_thread_self_deconstruct(void)
 {
-    struct avr_thread_context *t;
+    volatile struct avr_thread_context *t;
 
     avr_thread_run_queue_remove(avr_thread_active_context);
     avr_thread_sleep_queue_remove(avr_thread_active_context);
@@ -276,9 +279,9 @@ avr_thread_create(void (*entry) (void), uint8_t * stack,
 }
 
 static void
-avr_thread_init_thread(struct avr_thread_context *t, void (*entry) (void),
-                       uint8_t * stack, uint16_t stack_size,
-                       uint8_t priority)
+avr_thread_init_thread(volatile struct avr_thread_context *t,
+                       void (*entry) (void), uint8_t * stack,
+                       uint16_t stack_size, uint8_t priority)
 {
     uint8_t         i;
 
@@ -324,9 +327,9 @@ avr_thread_init_thread(struct avr_thread_context *t, void (*entry) (void),
 }
 
 void
-avr_thread_run_queue_push(struct avr_thread_context *t)
+avr_thread_run_queue_push(volatile struct avr_thread_context *t)
 {
-    struct avr_thread_context *r;
+    volatile struct avr_thread_context *r;
 
     for (r = avr_thread_run_queue; r != NULL; r = r->run_queue_next) {
         if (t->priority > r->priority) {
@@ -357,10 +360,10 @@ avr_thread_run_queue_push(struct avr_thread_context *t)
     t->run_queue_next = NULL;
 }
 
-static struct avr_thread_context *
+static volatile struct avr_thread_context *
 avr_thread_run_queue_pop(void)
 {
-    struct avr_thread_context *r;
+    volatile struct avr_thread_context *r;
 
     if (avr_thread_run_queue != NULL) {
         r = avr_thread_run_queue;
@@ -380,9 +383,9 @@ avr_thread_run_queue_pop(void)
 }
 
 static void
-avr_thread_run_queue_remove(struct avr_thread_context *t)
+avr_thread_run_queue_remove(volatile struct avr_thread_context *t)
 {
-    struct avr_thread_context *r;
+    volatile struct avr_thread_context *r;
 
     if (t == NULL) {
         return;
@@ -409,9 +412,9 @@ avr_thread_run_queue_remove(struct avr_thread_context *t)
 }
 
 static void
-avr_thread_sleep_queue_remove(struct avr_thread_context *t)
+avr_thread_sleep_queue_remove(volatile struct avr_thread_context *t)
 {
-    struct avr_thread_context *r,
+    volatile struct avr_thread_context *r,
                    *p;
 
     for (p = NULL, r = avr_thread_sleep_queue; r != NULL;
@@ -516,22 +519,20 @@ void
 avr_thread_yield(void)
 {
     uint8_t         ints;
-    struct avr_thread_context *t;
+    volatile struct avr_thread_context *t;
 
     ints = SREG & 0x80;
     cli();
 
     if (avr_thread_active_context->state == ats_runnable) {
         avr_thread_run_queue_push(avr_thread_active_context);
-    } 
+    }
 
     t = avr_thread_run_queue_pop();
 
     /*
-    if (t->state == ats_cancelled) {
-        avr_thread_self_deconstruct();
-    }
-    */
+     * if (t->state == ats_cancelled) { avr_thread_self_deconstruct(); } 
+     */
 
     if (t == avr_thread_active_context) {
         // Reset the tick
@@ -559,7 +560,7 @@ void
 avr_thread_join(struct avr_thread_context *t)
 {
     uint8_t         ints;
-    struct avr_thread_context *c,
+    volatile struct avr_thread_context *c,
                    *p;
 
     ints = SREG & 0x80;

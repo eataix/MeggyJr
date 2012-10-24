@@ -28,7 +28,7 @@
 #define MeggydimAqua   0,  3,   1
 #define MeggydimViolet 2,  0,   1
 
-extern byte     leds;
+extern volatile byte leds;
 
 void            meggyjr_init(void);
 

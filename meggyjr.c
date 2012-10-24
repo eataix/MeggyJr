@@ -1,19 +1,19 @@
 #include "meggyjr.h"
 #include "meggyjr_basic.h"
 
-byte            meggyjr_button_a;
-byte            meggyjr_button_b;
-byte            meggyjr_button_up;
-byte            meggyjr_button_down;
-byte            meggyjr_button_left;
-byte            meggyjr_button_right;
+volatile byte   meggyjr_button_a;
+volatile byte   meggyjr_button_b;
+volatile byte   meggyjr_button_up;
+volatile byte   meggyjr_button_down;
+volatile byte   meggyjr_button_left;
+volatile byte   meggyjr_button_right;
 
-static byte     meggyjr_game_slate[DIMENSION][DIMENSION];
-static byte     last_button_state;
+static volatile byte meggyjr_game_slate[DIMENSION][DIMENSION];
+static volatile byte last_button_state;
 
 
 // Color lookup Table
-byte            meggyjr_colour_table[26][3] = {
+static byte     meggyjr_colour_table[26][3] = {
     {MeggyDark}
     ,
     {MeggyRed}
