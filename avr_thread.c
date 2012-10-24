@@ -131,6 +131,10 @@ avr_thread_tick(uint8_t * saved_sp)
         }
     }
 
+    if (avr_thread_active_context->state == ats_cancelled) {
+        avr_thread_self_deconstruct();
+    }
+
     /*
      * Peek at the run queue if there is a thread with higher priority,
      * switch to it.
@@ -140,15 +144,19 @@ avr_thread_tick(uint8_t * saved_sp)
         /*
          * Warning: starvation is highly possible.
          */
-        avr_thread_active_context->ticks = QUANTUM;
-        avr_thread_run_queue_push(avr_thread_active_context);
+        avr_thread_prev_context = avr_thread_active_context;
         avr_thread_active_context = avr_thread_run_queue_pop();
+        avr_thread_run_queue_push(avr_thread_prev_context);
+        avr_thread_prev_context->ticks = QUANTUM;
+        avr_thread_active_context->ticks = QUANTUM;
     } else {
         --(avr_thread_active_context->ticks);
         if (avr_thread_active_context->ticks <= 0) {
-            avr_thread_active_context->ticks = QUANTUM;
-            avr_thread_run_queue_push(avr_thread_active_context);
+            avr_thread_prev_context = avr_thread_active_context;
             avr_thread_active_context = avr_thread_run_queue_pop();
+            avr_thread_run_queue_push(avr_thread_prev_context);
+            avr_thread_prev_context->ticks = QUANTUM;
+            avr_thread_active_context->ticks = QUANTUM;
         }
     }
 
@@ -513,16 +521,17 @@ avr_thread_yield(void)
     ints = SREG & 0x80;
     cli();
 
-    /*
-     * if (avr_thread_active_context->state == ats_runnable) {
-     * avr_thread_run_queue_push(avr_thread_active_context); } 
-     */
+    if (avr_thread_active_context->state == ats_runnable) {
+        avr_thread_run_queue_push(avr_thread_active_context);
+    } 
 
     t = avr_thread_run_queue_pop();
 
+    /*
     if (t->state == ats_cancelled) {
         avr_thread_self_deconstruct();
     }
+    */
 
     if (t == avr_thread_active_context) {
         // Reset the tick

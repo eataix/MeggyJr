@@ -143,6 +143,12 @@ meggyjr_set_sound_state(byte t)
 }
 
 static uint8_t  num_redraws = 0;
+static byte           *ptr;
+static byte            p;
+static byte            cb;
+static byte            bits;
+static byte            portbTemp;
+static byte            portdTemp;
 
 /**
  * ISR
@@ -151,13 +157,10 @@ static uint8_t  num_redraws = 0;
  **/
 ISR(TIMER2_COMPA_vect, ISR_NAKED)
 {
-    uint8_t        *saved_sp,
-                   *new_sp;
-
     __asm__("push r0");
-    __asm__("in r0,__SREG__");
-    __asm__("push r0");
+    __asm__("in r0, __SREG__");
     __asm__("cli");
+    __asm__("push r0");
     __asm__("push r1");
     __asm__("push r2");
     __asm__("push r3");
@@ -189,18 +192,7 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
     __asm__("push r29");
     __asm__("push r30");
     __asm__("push r31");
-
-    /*
-     * THIS IS MAGIC!!!
-     */
-    __asm__("in r28, 0x3d");
-    __asm__("in r29, 0x3e");
-    __asm__("sbiw r28, 0x0b");
-    __asm__("out 0x3e, r29");
-    __asm__("out 0x3d, r28");
-
-    saved_sp = SP;
-    new_sp = saved_sp;
+    __asm__("clr __zero_reg__");
 
     if (++current_brightness >= MAX_BT) {
         current_brightness = 0;
@@ -211,8 +203,7 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
             ++num_redraws;
             if (num_redraws == FPS / FIRE_PER_SEC) {
                 num_redraws = 0;
-                new_sp = avr_thread_tick(saved_sp);
-                goto isr_done;
+                SP = avr_thread_tick(SP);
             }
         } else {
             current_column_ptr += 24;   // 3 * 8
@@ -229,9 +220,8 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
         }
     }
 
-    byte           *ptr = current_column_ptr + 23;
-    byte            p;
-    byte            cb = current_brightness;
+    ptr = current_column_ptr + 23;
+    cb = current_brightness;
 
     PORTD |= 252U;
     PORTB |= 17U;
@@ -244,7 +234,7 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
         SPDR = 0;
     }
 
-    byte            bits = 0;
+    bits = 0;
 
     p = *ptr--;
     if (p > cb) {
@@ -359,8 +349,8 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
     }
     SPDR = bits;
 
-    byte            portbTemp = 0;
-    byte            portdTemp = 0;
+    portbTemp = 0;
+    portdTemp = 0;
 
     if (current_column == 0) {
         portbTemp = 239U;
@@ -387,12 +377,6 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
     SPCR = 0;
 
   isr_done:
-    SP = new_sp;
-
-    __asm__("adiw r28, 0x0b");
-    __asm__("out 0x3e, r29");
-    __asm__("out 0x3d, r28");
-
     __asm__("pop r31");
     __asm__("pop r30");
     __asm__("pop r29");
