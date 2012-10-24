@@ -1,5 +1,7 @@
 #include <meggyjr.h>
 #include <avr_thread.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
 
 #define MAX_SCORE 4096
 #define ABS(a) (((a) < 0) ? -(a) : (a))
@@ -69,6 +71,8 @@ main(void)
 
     meggyjr_setup();
     meggyjr_clear_slate();
+    main_thread = avr_thread_init(200, atp_noromal);
+    sei();
 
     xc = 7;
     yc = 6;
@@ -91,6 +95,7 @@ main(void)
 void
 loop(void)
 {
+
     meggyjr_check_button_down();
     if (meggyjr_button_a) {
         player_start = !player_start;
@@ -99,6 +104,7 @@ loop(void)
         clear_board();
         draw_board();
     }
+
     if (meggyjr_button_up) {
         sound = !sound;
         if (sound) {
@@ -145,7 +151,7 @@ draw_splash(void)
     int             i,
                     j,
                     d;
-    d = 45;
+    d = 1;
 
     for (j = 0; j < 8; ++j) {
         d -= 5;
@@ -153,12 +159,12 @@ draw_splash(void)
             meggyjr_draw(i, j, player_colors[0]);
             meggyjr_draw(7 - i, 7 - j, player_colors[1]);
             meggyjr_display_slate();
-            avr_thread_sleep(d);
+            avr_thread_sleep(1);
         }
     }
 
-    avr_thread_sleep(100);
-    flash_screen(4, 100);
+    avr_thread_sleep(1);
+    flash_screen(4, 1);
 }
 
 void
@@ -191,7 +197,8 @@ flash_screen(int n, int ms)
 void
 clear_board(void)
 {
-    int             wait = 50;
+    int             wait;
+    wait = 1;
     byte            i,
                     j;
     for (j = 7; j > 0; --j) {
@@ -230,7 +237,7 @@ swipe_image(byte * new_image)
 {
     byte            i,
                     j;
-    int             wait = 25;
+    int             wait = 1;
     for (j = 0; j < 8; ++j) {
         for (i = 0; i < 8; ++i) {
             meggyjr_draw(i, j, new_image[8 * j + i]);
@@ -244,7 +251,8 @@ void
 heavy()
 {
     int             row,
-                    wait = 50;
+                    wait;
+    wait = 1;
 
     row = yc;
 
@@ -421,13 +429,13 @@ flash_four(void)
         meggyjr_draw(cols[i], rows[i], player_colors[2]);
     }
     meggyjr_display_slate();
-    avr_thread_sleep(100);
+    avr_thread_sleep(1);
 
     for (i = 0; i < 4; ++i) {
         meggyjr_draw(cols[i], rows[i], save[i]);
     }
     meggyjr_display_slate();
-    avr_thread_sleep(100);
+    avr_thread_sleep(1);
 }
 
 void
@@ -490,20 +498,20 @@ computer_move(void)
             meggyjr_draw(xc, yc, Dark);
             meggyjr_draw(xc - 1, yc, player_colors[player]);
             meggyjr_display_slate();
-            avr_thread_sleep(100);
+            avr_thread_sleep(1);
         }
         for (; xc != col; ++xc) {
             meggyjr_draw(xc, yc, Dark);
             meggyjr_draw(xc + 1, yc, player_colors[player]);
             meggyjr_display_slate();
-            avr_thread_sleep(100);
+            avr_thread_sleep(1);
         }
     } else {
         for (; xc > 1; --xc) {
             meggyjr_draw(xc, yc, Dark);
             meggyjr_draw(xc - 1, yc, player_colors[player]);
             meggyjr_display_slate();
-            avr_thread_sleep(100);
+            avr_thread_sleep(1);
         }
         max_score = -1;
         for (; xc < 8; ++xc) {
@@ -530,7 +538,7 @@ computer_move(void)
             meggyjr_draw(xc, yc, Dark);
             meggyjr_draw(xc - 1, yc, player_colors[player]);
             meggyjr_display_slate();
-            avr_thread_sleep(40);
+            avr_thread_sleep(1);
         }
     }
     heavy();
