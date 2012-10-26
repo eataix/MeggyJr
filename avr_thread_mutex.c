@@ -19,6 +19,7 @@ avr_thread_basic_mutex_create(void)
         return NULL;
     }
     mutex->locked = 0;
+    mutex->wait_queue = NULL; 
 
     return mutex;
 }
@@ -62,6 +63,11 @@ avr_thread_basic_mutex_acquire(volatile struct avr_thread_basic_mutex
             SREG = sreg;
             return;
         } else {
+            SREG = sreg;
+            avr_thread_yield();
+            continue;
+
+            /* TODO
             t = mutex->wait_queue;
             p = NULL;
             while (t != NULL) {
@@ -72,18 +78,14 @@ avr_thread_basic_mutex_acquire(volatile struct avr_thread_basic_mutex
                 mutex->wait_queue = avr_thread_active_context;
                 mutex->wait_queue->wait_queue_next = NULL;
             } else {
-                // p->wait_queue_next may be NULL. Does not matter.
                 avr_thread_active_context->wait_queue_next =
                     p->wait_queue_next;
                 p->wait_queue_next = avr_thread_active_context;
             }
-#ifdef DEBUG
-            avr_thread_active_context->waiting_for = mutex;
-#endif
             avr_thread_active_context->state = ats_waiting;
-
             SREG = sreg;
             avr_thread_yield();
+            */
         }
     }
 }
@@ -93,22 +95,25 @@ avr_thread_basic_mutex_release(volatile struct avr_thread_basic_mutex
                                *mutex)
 {
     uint8_t         sreg = SREG;
-    volatile struct avr_thread_context *p;
     cli();
+
+    if (mutex == NULL) {
+        sei();
+        return;
+    }
 
     if (mutex != NULL && mutex->locked == 1) {
         mutex->locked = 0;
     }
 
-    /*
+    /* TODO
      * Wake up the waiting thread.
-     */
-    p = mutex->wait_queue;
-    while (p != NULL) {
-        p->state = ats_runnable;
-        avr_thread_run_queue_push(p);
-        p = p->wait_queue_next;
+    while (mutex->wait_queue != NULL) {
+        mutex->wait_queue->state = ats_runnable;
+        avr_thread_run_queue_push(mutex->wait_queue);
+        mutex->wait_queue = mutex->wait_queue->wait_queue_next;
     }
+     */
 
     SREG = sreg;
     /*

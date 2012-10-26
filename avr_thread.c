@@ -44,7 +44,7 @@ static void     avr_thread_sleep_queue_remove(volatile struct avr_thread_context
 static void     avr_thread_idle_entry(void);
 
 static void     avr_thread_init_thread(volatile struct avr_thread_context
-                                       *t, void (*entry) (void),
+                                       *t, void        (*entry) (void),
                                        uint8_t * stack,
                                        uint16_t stack_size,
                                        uint8_t priority);
@@ -323,6 +323,7 @@ avr_thread_init_thread(volatile struct avr_thread_context *t,
     t->ticks = QUANTUM;
     t->state = ats_runnable;
 
+    t->wait_queue_next = NULL;
     return;
 }
 
@@ -529,10 +530,6 @@ avr_thread_yield(void)
     }
 
     t = avr_thread_run_queue_pop();
-
-    /*
-     * if (t->state == ats_cancelled) { avr_thread_self_deconstruct(); } 
-     */
 
     if (t == avr_thread_active_context) {
         // Reset the tick

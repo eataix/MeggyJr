@@ -86,14 +86,18 @@ meggyjr_check_button_down(void)
 void
 meggyjr_check_button_pressed(void)
 {
-    byte            i = meggyjr_get_button();
+    byte            i,
+                    j;
 
-    meggyjr_button_b = (i & 1);
-    meggyjr_button_a = (i & 2);
-    meggyjr_button_up = (i & 4);
-    meggyjr_button_down = (i & 8);
-    meggyjr_button_left = (i & 16);
-    meggyjr_button_right = (i & 32);
+    i = meggyjr_get_button();
+    j = i & ~(last_button_state);
+
+    meggyjr_button_b = (j & 1);
+    meggyjr_button_a = (j & 2);
+    meggyjr_button_up = (j & 4);
+    meggyjr_button_down = (j & 8);
+    meggyjr_button_left = (j & 16);
+    meggyjr_button_right = (j & 32);
 
     last_button_state = i;
 }

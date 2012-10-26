@@ -2,6 +2,7 @@
 #define _MEGGYJRLIB_H
 
 #include <inttypes.h>
+#include <stddef.h>
 
 #define DIMENSION 8
 

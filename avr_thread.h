@@ -2,10 +2,11 @@
 #define __THREAD_H
 
 #include <inttypes.h>
+#include <stddef.h>
 
 #define MAX_NUM_THREADS 32
-#define QUANTUM         5
-#define FIRE_PER_SEC    10
+#define QUANTUM         2
+#define FIRE_PER_SEC    20
 #define REGISTERS_SIZE  (32 + 1)        // 32 GP + 1 SREG
 #define RETURN_SIZE      4      // 2 + 2
 #define MIN_STACK_SIZE  (REGISTERS_SIZE + RETURN_SIZE)
