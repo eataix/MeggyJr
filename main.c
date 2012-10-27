@@ -9,11 +9,9 @@
 byte            xc,
                 yc;
 
-unsigned long   loop_counter = 0;
-
-uint8_t         player,
+uint8_t         player_turn,
                 player_start,
-                sound;
+                sound_enabled;
 
 byte            depth = 0;
 byte            n_move;
@@ -31,12 +29,10 @@ int             tune_win[] =
 int             tune_lose[] =
     { ToneG4, ToneE4, ToneF4, ToneE4, ToneD4, ToneC4, ToneC4, 0 };
 
-byte            tune_note;
+byte            tone_current;
 
 
 void            loop(void);
-
-void            blink_player(void);
 
 void            draw_splash(void);
 
@@ -62,84 +58,80 @@ void            computer_move(void);
 
 int             get_score(byte col, byte depth);
 
-void            update_auxleds(void);
-
-struct avr_thread_basic_mutex *mutex;
-
+struct avr_thread_mutex *mutex;
 
 volatile byte   button_a;
-volatile byte   button_b;
 volatile byte   button_up;
 volatile byte   button_down;
 volatile byte   button_left;
 volatile byte   button_right;
 
-void key_entry(void)
+void
+key_entry(void)
 {
     while (1) {
-        avr_thread_basic_mutex_acquire(mutex);
+        avr_thread_mutex_acquire(mutex);
         meggyjr_check_button_pressed();
         if (meggyjr_button_a) {
             ++button_a;
         }
         if (meggyjr_button_b) {
-            button_b += 1;
+        avr_thread_mutex_release(mutex);
+            return;
         }
         if (meggyjr_button_up) {
-            button_up += 1;
+            button_up = 1;
         }
         if (meggyjr_button_down) {
-            button_down += 1;
+            button_down = 1;
         }
         if (meggyjr_button_left) {
-            button_left += 1;
+            button_left = 1;
         }
         if (meggyjr_button_right) {
-            button_right += 1;
+            button_right = 1;
         }
-        avr_thread_basic_mutex_release(mutex);
+        avr_thread_mutex_release(mutex);
         avr_thread_yield();
     }
 }
 
-uint8_t key_stack[50];
+uint8_t         key_stack[50];
 
 int
 main(void)
 {
     struct avr_thread_context *main_thread,
-                               *key_thread;
+                   *key_thread;
 
     meggyjr_setup();
     meggyjr_clear_slate();
     sei();
     main_thread = avr_thread_init(200, atp_noromal);
 
-    button_a = 0 ;
-    button_b = 0 ;
-    button_up = 0 ;
-    button_down = 0 ;
-    button_left = 0 ;
-    button_right = 0 ;
+    button_a = 0;
+    button_up = 0;
+    button_down = 0;
+    button_left = 0;
+    button_right = 0;
 
-    mutex = avr_thread_basic_mutex_create();
+    mutex = avr_thread_mutex_create();
 
     key_thread = avr_thread_create(key_entry, key_stack,
                                    sizeof key_stack, atp_noromal);
 
-    xc = 7;
+    xc = 6;
     yc = 6;
 
     player_start = 0;
-    player = player_start;
+    player_turn = player_start;
     draw_splash();
     draw_board();
     game_over = 0;
     depth = 4;
     n_move = 1;
-    tune_note = 0;
-    sound = 1;
-    update_auxleds();
+    tone_current = 0;
+    sound_enabled = 1;
 
     while (1) {
         loop();
@@ -149,11 +141,11 @@ main(void)
 void
 loop(void)
 {
-    avr_thread_basic_mutex_acquire(mutex);
+    avr_thread_mutex_acquire(mutex);
 
     if (button_a) {
         player_start = !player_start;
-        player = player_start;
+        player_turn = player_start;
         game_over = 0;
         clear_board();
         draw_board();
@@ -161,59 +153,47 @@ loop(void)
     }
 
     if (button_up) {
-        sound = !sound;
-        if (sound) {
+        sound_enabled = !sound_enabled;
+        if (sound_enabled) {
             meggyjr_tone_start(ToneC5, 30);
         }
-        update_auxleds();
         button_up -= 0;
     }
 
-    avr_thread_basic_mutex_release(mutex);
+    avr_thread_mutex_release(mutex);
 
     if (game_over) {
         meggyjr_draw(xc, yc, Dark);
         flash_four();
-        if (player == 1) {
-            if (sound && tune_win[tune_note] != 0) {
-                meggyjr_tone_start(tune_win[tune_note], 100);
-                ++tune_note;
+        if (player_turn == 1) {
+            if (sound_enabled && tune_win[tone_current] != 0) {
+                meggyjr_tone_start(tune_win[tone_current], 100);
+                ++tone_current;
             }
         } else {
-            if (sound && tune_lose[tune_note] != 0) {
-                meggyjr_tone_start(tune_lose[tune_note], 100);
-                ++tune_note;
+            if (sound_enabled && tune_lose[tone_current] != 0) {
+                meggyjr_tone_start(tune_lose[tone_current], 100);
+                ++tone_current;
             }
         }
-    } else if (player == 0) {
+    } else if (player_turn == 0) {
+        meggyjr_set_led_binary(0b01010101);
         player_move();
     } else {
+        meggyjr_set_led_binary(0b10101010);
         computer_move();
     }
-    ++loop_counter;
-    avr_thread_yield();
-}
 
-void
-blink_player(void)
-{
-    if (loop_counter % 1000 < 700) {
-        meggyjr_draw(xc, yc, player_colors[player]);
-    } else {
-        meggyjr_draw(xc, yc, Dark);
-    }
+    avr_thread_yield();
 }
 
 void
 draw_splash(void)
 {
     int             i,
-                    j,
-                    d;
-    d = 9;
+                    j;
 
     for (j = 0; j < 8; ++j) {
-        --d;
         for (i = 0; i < 8; ++i) {
             meggyjr_draw(i, j, player_colors[0]);
             meggyjr_draw(7 - i, 7 - j, player_colors[1]);
@@ -223,7 +203,7 @@ draw_splash(void)
     }
 
     avr_thread_sleep(1);
-    flash_screen(4, 1);
+    flash_screen(4, 3);
 }
 
 void
@@ -264,7 +244,8 @@ clear_board(void)
             meggyjr_draw(i, j, Dark);
         }
     }
-    if (sound) {
+
+    if (sound_enabled) {
         meggyjr_tone_start(ToneF5 + (((ToneA5 - ToneF5) / 7) * j), 30);
     }
 
@@ -285,6 +266,7 @@ draw_board(void)
     for (i = 0; i < 8; ++i) {
         board[8 * 7 + i] = White;
         board[8 * i] = White;
+        board[8 * i + 7] = White;
     }
 
     swipe_image(board);
@@ -318,7 +300,7 @@ heavy()
         row = 5;
         while (meggyjr_read_pixel(xc, row) == Dark && row >= 0) {
             meggyjr_draw(xc, row + 1, Dark);
-            meggyjr_draw(xc, row, player_colors[player]);
+            meggyjr_draw(xc, row, player_colors[player_turn]);
             meggyjr_display_slate();
             avr_thread_sleep(wait);
             --row;
@@ -327,7 +309,7 @@ heavy()
         game_over = check_four(xc, row);
 
         if (game_over) {
-            tune_note = 0;
+            tone_current = 0;
         }
         next_player();
     }
@@ -337,10 +319,10 @@ void
 next_player(void)
 {
     ++n_move;
-    if (player == 0) {
-        player = 1;
+    if (player_turn == 0) {
+        player_turn = 1;
     } else {
-        player = 0;
+        player_turn = 0;
     }
 }
 
@@ -494,47 +476,47 @@ flash_four(void)
         meggyjr_draw(cols[i], rows[i], save[i]);
     }
     meggyjr_display_slate();
-    avr_thread_sleep(1);
+    avr_thread_sleep(3);
 }
 
 void
 player_move(void)
 {
-    avr_thread_basic_mutex_acquire(mutex);
+    avr_thread_mutex_acquire(mutex);
 
     if (button_down) {
         heavy();
-        if (sound) {
+        if (sound_enabled) {
             meggyjr_tone_start(ToneD5, 20);
         }
-        button_down -= 1;
+        button_down = 0;
     }
 
     if (button_right) {
-        if (xc < 7) {
+        if (xc < 6) {
             meggyjr_draw(xc, yc, Dark);
             xc = (xc + 1) % 8;
-            if (sound) {
+            if (sound_enabled) {
                 meggyjr_tone_start(ToneD5, 20);
             }
         }
-        button_right -= 1;
+        button_right = 0;
     }
 
     if (button_left) {
         if (xc > 1) {
             meggyjr_draw(xc, yc, Dark);
             xc = (xc - 1) % 8;
-            if (sound) {
+            if (sound_enabled) {
                 meggyjr_tone_start(ToneC5, 20);
             }
         }
-        button_left-- ;
+        button_left = 0;
     }
 
-    avr_thread_basic_mutex_release(mutex);
+    avr_thread_mutex_release(mutex);
 
-    blink_player();
+    meggyjr_draw(xc, yc, player_colors[player_turn]);
     meggyjr_display_slate();
     avr_thread_sleep(1);
 }
@@ -547,23 +529,23 @@ computer_move(void)
     int             max_score;
 
     if (n_move < 1) {
-        col = 3;                // TODO
+        col = 3;
         for (; xc > 1; --xc) {
             meggyjr_draw(xc, yc, Dark);
-            meggyjr_draw(xc - 1, yc, player_colors[player]);
+            meggyjr_draw(xc - 1, yc, player_colors[player_turn]);
             meggyjr_display_slate();
             avr_thread_sleep(1);
         }
         for (; xc != col; ++xc) {
             meggyjr_draw(xc, yc, Dark);
-            meggyjr_draw(xc + 1, yc, player_colors[player]);
+            meggyjr_draw(xc + 1, yc, player_colors[player_turn]);
             meggyjr_display_slate();
             avr_thread_sleep(1);
         }
     } else {
         for (; xc > 1; --xc) {
             meggyjr_draw(xc, yc, Dark);
-            meggyjr_draw(xc - 1, yc, player_colors[player]);
+            meggyjr_draw(xc - 1, yc, player_colors[player_turn]);
             meggyjr_display_slate();
             avr_thread_sleep(1);
         }
@@ -580,21 +562,22 @@ computer_move(void)
                 }
             }
             meggyjr_draw(xc, yc, Dark);
-            meggyjr_draw(xc + 1, yc, player_colors[player]);
+            meggyjr_draw(xc + 1, yc, player_colors[player_turn]);
             meggyjr_display_slate();
         }
-        meggyjr_draw(xc, yc, player_colors[player]);
+        meggyjr_draw(xc, yc, player_colors[player_turn]);
 
         for (; xc > 0; --xc) {
             if (scores[xc] == max_score) {
                 break;
             }
             meggyjr_draw(xc, yc, Dark);
-            meggyjr_draw(xc - 1, yc, player_colors[player]);
+            meggyjr_draw(xc - 1, yc, player_colors[player_turn]);
             meggyjr_display_slate();
             avr_thread_sleep(1);
         }
     }
+
     heavy();
 }
 
@@ -622,7 +605,7 @@ get_score(byte col, byte depth)
                 break;
             }
         }
-        meggyjr_draw(col, row, player_colors[player]);
+        meggyjr_draw(col, row, player_colors[player_turn]);
 
         if (check_four(col, row)) {
             score = MAX_SCORE;
@@ -643,8 +626,8 @@ get_score(byte col, byte depth)
                 }
             }
         } else {
-            meggyjr_draw(col, row, player_colors[player]);
-            player = !player;
+            meggyjr_draw(col, row, player_colors[player_turn]);
+            player_turn = !player_turn;
 
             opp_max_score = -MAX_SCORE;
             for (opp_col = 1; opp_col < 8; ++opp_col) {
@@ -658,20 +641,10 @@ get_score(byte col, byte depth)
             }
 
             meggyjr_draw(col, row, Dark);
-            player = !player;
+            player_turn = !player_turn;
             score = (MAX_SCORE - opp_max_score) / 2;
         }
     }
     return score;
 }
 
-void
-update_auxleds(void)
-{
-    byte            i;
-    i = 1 << depth;
-    if (sound) {
-        i += 128;
-    }
-    meggyjr_set_led(i);
-}
