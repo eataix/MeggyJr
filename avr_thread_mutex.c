@@ -59,7 +59,9 @@ avr_thread_mutex_acquire(volatile struct avr_thread_mutex
 
         if (mutex->locked == 0) {
             mutex->locked = 1;
-
+#ifdef SANITY
+            avr_thread_active_context->owning = mutex;
+#endif
             SREG = sreg;
             return;
         } else {
@@ -108,12 +110,20 @@ avr_thread_mutex_release(volatile struct avr_thread_mutex
 
     if (mutex != NULL && mutex->locked == 1) {
         mutex->locked = 0;
-    }
 
-    while (mutex->wait_queue != NULL) {
-        mutex->wait_queue->state = ats_runnable;
-        avr_thread_run_queue_push(mutex->wait_queue);
-        mutex->wait_queue = mutex->wait_queue->wait_queue_next;
+#ifdef SANITY
+        /*
+         * I assume the thread releases the mutex is the one owning the
+         * mutex
+         */
+        avr_thread_active_context->owning = NULL;
+#endif
+
+        while (mutex->wait_queue != NULL) {
+            mutex->wait_queue->state = ats_runnable;
+            avr_thread_run_queue_push(mutex->wait_queue);
+            mutex->wait_queue = mutex->wait_queue->wait_queue_next;
+        }
     }
 
     SREG = sreg;

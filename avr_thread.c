@@ -192,7 +192,7 @@ avr_thread_self_deconstruct(void)
          * The thread that joined to the current thread may be cancelled
          * by another thread...
          */
-        if (t->state = ats_joined) {
+        if (t->state == ats_joined) {
             t->state = ats_runnable;
             avr_thread_run_queue_push(t);
         }
@@ -330,6 +330,10 @@ avr_thread_init_thread(volatile struct avr_thread_context *t,
     t->state = ats_runnable;
 
     t->next_joined = NULL;
+#ifdef SANITY
+    t->owning = NULL;
+#endif
+
     return;
 }
 
@@ -456,10 +460,13 @@ avr_thread_exit(void)
  * Cancel a thread.
  * Make it as cancelled and move on.
  */
-void
+int8_t
 avr_thread_cancel(struct avr_thread_context *t)
 {
     uint8_t         ints;
+
+    ints = SREG & 0x80;
+    cli();
 
     /*
      * I do not think a thread should be allowed to cancel itself.
@@ -469,11 +476,18 @@ avr_thread_cancel(struct avr_thread_context *t)
      */
     if (t == NULL || t->state == ats_invalid ||
         t == avr_thread_active_context) {
-        return;
+        goto error;
     }
 
-    ints = SREG & 0x80;
-    cli();
+    /*
+     * Will a sane person cancel a thread that is currently owning
+     * a mutex?
+     */
+#ifdef SANITY
+    if (t->owning != NULL) {
+        goto error;
+    }
+#endif
 
     t->state = ats_cancelled;
 
@@ -485,9 +499,17 @@ avr_thread_cancel(struct avr_thread_context *t)
         t->next_joined = t->next_joined->next_joined;
     }
 
+    avr_thread_run_queue_remove(t);
+    avr_thread_sleep_queue_remove(t);
+
     t->state = ats_invalid;
 
     SREG |= ints;
+    return 0;
+
+error:
+    SREG |= ints;
+    return 1;
 }
 
 void
@@ -495,12 +517,12 @@ avr_thread_pause(struct avr_thread_context *t)
 {
     uint8_t         ints;
 
-    if (t == NULL) {
-        return;
-    }
-
     ints = SREG & 0x80;
     cli();
+
+    if (t == NULL) {
+        goto exit;
+    }
 
     avr_thread_run_queue_remove(t);
     avr_thread_sleep_queue_remove(t);
@@ -509,7 +531,9 @@ avr_thread_pause(struct avr_thread_context *t)
         avr_thread_yield();
     }
 
+exit:
     SREG |= ints;
+    return;
 }
 
 void
@@ -517,12 +541,12 @@ avr_thread_resume(struct avr_thread_context *t)
 {
     uint8_t         ints;
 
-    if (t == NULL || t->state != ats_paused) {
-        return;
-    }
-
     ints = SREG & 0x80;
     cli();
+
+    if (t == NULL || t->state != ats_paused) {
+        goto exit;
+    }
 
     avr_thread_run_queue_push(t);
     t->state = ats_runnable;
@@ -531,7 +555,9 @@ avr_thread_resume(struct avr_thread_context *t)
         avr_thread_yield();
     }
 
+exit:
     SREG |= ints;
+    return;
 }
 
 void

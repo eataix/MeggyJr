@@ -39,6 +39,9 @@ struct avr_thread_context {
     volatile struct avr_thread_context *sleep_queue_next;
     volatile struct avr_thread_context *wait_queue_next;
     volatile struct avr_thread_context *next_joined;
+#ifdef SANITY
+    void *owning;
+#endif
 };
 
 struct avr_thread_mutex {
@@ -96,7 +99,7 @@ uint8_t        *avr_thread_tick(uint8_t * saved_sp);
 
 void            avr_thread_save_sp(uint8_t * sp);
 
-void            avr_thread_cancel(struct avr_thread_context *t);
+int8_t         avr_thread_cancel(struct avr_thread_context *t);
 
 void            avr_thread_exit(void);
 
