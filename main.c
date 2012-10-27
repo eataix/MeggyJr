@@ -66,6 +66,11 @@ volatile byte   button_down;
 volatile byte   button_left;
 volatile byte   button_right;
 
+struct avr_thread_context *main_thread,
+                          *key_thread,
+                          *led_thread;
+
+
 void
 key_entry(void)
 {
@@ -76,8 +81,7 @@ key_entry(void)
             ++button_a;
         }
         if (meggyjr_button_b) {
-        avr_thread_mutex_release(mutex);
-            return;
+            avr_thread_cancel(led_thread);
         }
         if (meggyjr_button_up) {
             button_up = 1;
@@ -96,14 +100,25 @@ key_entry(void)
     }
 }
 
-uint8_t         key_stack[50];
+void
+led_entry(void)
+{
+    while (1) {
+        if (player_turn) {
+            meggyjr_set_led_binary(0b01010101);
+        } else {
+            meggyjr_set_led_binary(0b10101010);
+        }
+        avr_thread_yield();
+    }
+}
+
+uint8_t         key_stack[50],
+                led_stack[50];
 
 int
 main(void)
 {
-    struct avr_thread_context *main_thread,
-                   *key_thread;
-
     meggyjr_setup();
     meggyjr_clear_slate();
     sei();
@@ -119,6 +134,9 @@ main(void)
 
     key_thread = avr_thread_create(key_entry, key_stack,
                                    sizeof key_stack, atp_noromal);
+
+    led_thread = avr_thread_create(led_entry, led_stack,
+                                   sizeof led_stack, atp_noromal);
 
     xc = 6;
     yc = 6;
@@ -177,10 +195,8 @@ loop(void)
             }
         }
     } else if (player_turn == 0) {
-        meggyjr_set_led_binary(0b01010101);
         player_move();
     } else {
-        meggyjr_set_led_binary(0b10101010);
         computer_move();
     }
 

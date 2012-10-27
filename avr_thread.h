@@ -99,7 +99,7 @@ uint8_t        *avr_thread_tick(uint8_t * saved_sp);
 
 void            avr_thread_save_sp(uint8_t * sp);
 
-int8_t         avr_thread_cancel(struct avr_thread_context *t);
+int8_t          avr_thread_cancel(struct avr_thread_context *t);
 
 void            avr_thread_exit(void);
 
