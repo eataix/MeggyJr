@@ -163,7 +163,7 @@ meggyjr_display_slate(void)
     }
 }
 
-void
+inline void
 meggyjr_tone_start(unsigned int divisor, unsigned int duration_ms)
 {
     meggyjr_start_tone(divisor, duration_ms);

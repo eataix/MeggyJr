@@ -98,6 +98,7 @@ void key_entry(void)
             button_right += 1;
         }
         avr_thread_basic_mutex_release(mutex);
+        avr_thread_yield();
     }
 }
 
@@ -123,8 +124,8 @@ main(void)
 
     mutex = avr_thread_basic_mutex_create();
 
-    key_thread = avr_thread_create(key_entry, key_stack, sizeof key_stack,
-                                    atp_noromal);
+    key_thread = avr_thread_create(key_entry, key_stack,
+                                   sizeof key_stack, atp_noromal);
 
     xc = 7;
     yc = 6;
@@ -148,7 +149,7 @@ main(void)
 void
 loop(void)
 {
-   avr_thread_basic_mutex_acquire(mutex);
+    avr_thread_basic_mutex_acquire(mutex);
 
     if (button_a) {
         player_start = !player_start;
@@ -189,8 +190,8 @@ loop(void)
     } else {
         computer_move();
     }
-
     ++loop_counter;
+    avr_thread_yield();
 }
 
 void
@@ -501,7 +502,7 @@ player_move(void)
 {
     avr_thread_basic_mutex_acquire(mutex);
 
-    while (button_down) {
+    if (button_down) {
         heavy();
         if (sound) {
             meggyjr_tone_start(ToneD5, 20);
@@ -509,7 +510,7 @@ player_move(void)
         button_down -= 1;
     }
 
-    while (button_right) {
+    if (button_right) {
         if (xc < 7) {
             meggyjr_draw(xc, yc, Dark);
             xc = (xc + 1) % 8;
@@ -528,7 +529,7 @@ player_move(void)
                 meggyjr_tone_start(ToneC5, 20);
             }
         }
-        button_left = 0;
+        button_left-- ;
     }
 
     avr_thread_basic_mutex_release(mutex);

@@ -63,11 +63,12 @@ avr_thread_basic_mutex_acquire(volatile struct avr_thread_basic_mutex
             SREG = sreg;
             return;
         } else {
+            /* TODO
             SREG = sreg;
             avr_thread_yield();
             continue;
+            */
 
-            /* TODO
             t = mutex->wait_queue;
             p = NULL;
             while (t != NULL) {
@@ -83,9 +84,9 @@ avr_thread_basic_mutex_acquire(volatile struct avr_thread_basic_mutex
                 p->wait_queue_next = avr_thread_active_context;
             }
             avr_thread_active_context->state = ats_waiting;
+
             SREG = sreg;
             avr_thread_yield();
-            */
         }
     }
 }
@@ -106,14 +107,11 @@ avr_thread_basic_mutex_release(volatile struct avr_thread_basic_mutex
         mutex->locked = 0;
     }
 
-    /* TODO
-     * Wake up the waiting thread.
     while (mutex->wait_queue != NULL) {
         mutex->wait_queue->state = ats_runnable;
         avr_thread_run_queue_push(mutex->wait_queue);
         mutex->wait_queue = mutex->wait_queue->wait_queue_next;
     }
-     */
 
     SREG = sreg;
     /*

@@ -228,7 +228,7 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
 
     SPCR = 80;
 
-    if ((cb + current_column) == 0) {
+    if ((cb + current_column) == 0 || (cb+ current_column) == 4) {
         SPDR = leds;
     } else {
         SPDR = 0;
@@ -376,7 +376,6 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
 
     SPCR = 0;
 
-  isr_done:
     __asm__("pop r31");
     __asm__("pop r30");
     __asm__("pop r29");
