@@ -134,10 +134,6 @@ avr_thread_tick(uint8_t * saved_sp)
         }
     }
 
-    if (avr_thread_active_context->state == ats_cancelled) {
-        avr_thread_self_deconstruct();
-    }
-
     /*
      * Peek at the run queue if there is a thread with higher priority,
      * switch to it.
@@ -192,8 +188,14 @@ avr_thread_self_deconstruct(void)
      * and push the threads to the run queue.
      */
     while (t != NULL) {
-        t->state = ats_runnable;
-        avr_thread_run_queue_push(t);
+        /*
+         * The thread that joined to the current thread may be cancelled
+         * by another thread...
+         */
+        if (t->state = ats_joined) {
+            t->state = ats_runnable;
+            avr_thread_run_queue_push(t);
+        }
         t = t->next_joined;
     }
 
@@ -460,11 +462,13 @@ avr_thread_cancel(struct avr_thread_context *t)
     uint8_t         ints;
 
     /*
-     * You cannot cancel a thread that is
-     * 1. invalid or
-     * 2. the active thread (use avr_thread_exit() instead)
+     * I do not think a thread should be allowed to cancel itself.
+     * I want to minimise the number of ways a thread has to exit.
+     * `There should be one-- and preferably only one --obvious way to
+     * do it.'
      */
-    if (t == NULL || t == avr_thread_active_context) {
+    if (t == NULL || t->state == ats_invalid ||
+        t == avr_thread_active_context) {
         return;
     }
 
@@ -472,6 +476,16 @@ avr_thread_cancel(struct avr_thread_context *t)
     cli();
 
     t->state = ats_cancelled;
+
+    while (t->next_joined != NULL) {
+        if (t->next_joined->state == ats_joined) {
+            t->next_joined->state = ats_runnable;
+            avr_thread_run_queue_push(t->next_joined);
+        }
+        t->next_joined = t->next_joined->next_joined;
+    }
+
+    t->state = ats_invalid;
 
     SREG |= ints;
 }
@@ -583,8 +597,11 @@ avr_thread_join(struct avr_thread_context *t)
         return;
     }
 
-    for (p = NULL, c = t->next_joined; c != NULL;
-         p = c, c = c->next_joined) {
+    p = NULL;
+    c = t->next_joined;
+    while (c != NULL) { 
+        p = c;
+        c = c->next_joined;
     }
 
     if (p == NULL) {
