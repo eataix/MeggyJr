@@ -507,7 +507,7 @@ avr_thread_cancel(struct avr_thread_context *t)
     SREG |= ints;
     return 0;
 
-error:
+  error:
     SREG |= ints;
     return 1;
 }
@@ -520,18 +520,15 @@ avr_thread_pause(struct avr_thread_context *t)
     ints = SREG & 0x80;
     cli();
 
-    if (t == NULL) {
+    if (t == NULL || t == avr_thread_active_context) {
         goto exit;
     }
 
     avr_thread_run_queue_remove(t);
     avr_thread_sleep_queue_remove(t);
     t->state = ats_paused;
-    if (t == avr_thread_active_context) {
-        avr_thread_yield();
-    }
 
-exit:
+  exit:
     SREG |= ints;
     return;
 }
@@ -548,14 +545,14 @@ avr_thread_resume(struct avr_thread_context *t)
         goto exit;
     }
 
-    avr_thread_run_queue_push(t);
     t->state = ats_runnable;
+    avr_thread_run_queue_push(t);
 
     if (t->priority > avr_thread_active_context->priority) {
         avr_thread_yield();
     }
 
-exit:
+  exit:
     SREG |= ints;
     return;
 }
@@ -625,7 +622,7 @@ avr_thread_join(struct avr_thread_context *t)
 
     p = NULL;
     c = t->next_joined;
-    while (c != NULL) { 
+    while (c != NULL) {
         p = c;
         c = c->next_joined;
     }

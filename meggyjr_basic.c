@@ -143,7 +143,7 @@ meggyjr_set_sound_state(byte t)
 }
 
 static volatile uint8_t num_redraws = 0;
-static volatile byte    *ptr;
+static volatile byte *ptr;
 static byte     p;
 static byte     cb;
 static byte     bits;

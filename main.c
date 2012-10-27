@@ -10,11 +10,7 @@ byte            xc,
                 yc;
 
 uint8_t         player_turn,
-                player_start,
                 sound_enabled;
-
-byte            depth = 0;
-byte            n_move;
 
 byte            player_colors[] = { Red, Yellow, Dark };
 
@@ -48,15 +44,15 @@ void            heavy(void);
 
 void            next_player(void);
 
-uint8_t         check_four(byte i, byte j);
+uint8_t         check_three(byte i, byte j);
 
-void            flash_four(void);
+void            flash_three(void);
 
 void            player_move(void);
 
 void            computer_move(void);
 
-int             get_score(byte col, byte depth);
+int             calculate_score(byte col);
 
 struct avr_thread_mutex *mutex;
 
@@ -67,9 +63,8 @@ volatile byte   button_left;
 volatile byte   button_right;
 
 struct avr_thread_context *main_thread,
-                          *key_thread,
-                          *led_thread;
-
+               *key_thread,
+               *led_thread;
 
 void
 key_entry(void)
@@ -78,12 +73,15 @@ key_entry(void)
         avr_thread_mutex_acquire(mutex);
         meggyjr_check_button_pressed();
         if (meggyjr_button_a) {
-            ++button_a;
+            avr_thread_resume(led_thread);
+            button_a = 1;
         }
         if (meggyjr_button_b) {
-            avr_thread_cancel(led_thread);
+            avr_thread_pause(led_thread);
+            meggyjr_button_b = 0;
         }
         if (meggyjr_button_up) {
+            avr_thread_cancel(led_thread);
             button_up = 1;
         }
         if (meggyjr_button_down) {
@@ -105,9 +103,9 @@ led_entry(void)
 {
     while (1) {
         if (player_turn) {
-            meggyjr_set_led_binary(0b01010101);
+            meggyjr_set_led_binary(0 b01010101);
         } else {
-            meggyjr_set_led_binary(0b10101010);
+            meggyjr_set_led_binary(0 b10101010);
         }
         avr_thread_yield();
     }
@@ -122,7 +120,7 @@ main(void)
     meggyjr_setup();
     meggyjr_clear_slate();
     sei();
-    main_thread = avr_thread_init(200, atp_noromal);
+    main_thread = avr_thread_init(300, atp_noromal);
 
     button_a = 0;
     button_up = 0;
@@ -141,13 +139,10 @@ main(void)
     xc = 6;
     yc = 6;
 
-    player_start = 0;
-    player_turn = player_start;
+    player_turn = 1;
     draw_splash();
     draw_board();
     game_over = 0;
-    depth = 4;
-    n_move = 1;
     tone_current = 0;
     sound_enabled = 1;
 
@@ -162,12 +157,15 @@ loop(void)
     avr_thread_mutex_acquire(mutex);
 
     if (button_a) {
-        player_start = !player_start;
-        player_turn = player_start;
-        game_over = 0;
-        clear_board();
+        xc = 6;
+        yc = 6;
+
+        player_turn = 1;
+        draw_splash();
         draw_board();
-        button_a -= 1;
+        game_over = 0;
+        tone_current = 0;
+        button_a = 0;
     }
 
     if (button_up) {
@@ -175,14 +173,14 @@ loop(void)
         if (sound_enabled) {
             meggyjr_tone_start(ToneC5, 30);
         }
-        button_up -= 0;
+        button_up = 0;
     }
 
     avr_thread_mutex_release(mutex);
 
     if (game_over) {
         meggyjr_draw(xc, yc, Dark);
-        flash_four();
+        flash_three();
         if (player_turn == 1) {
             if (sound_enabled && tune_win[tone_current] != 0) {
                 meggyjr_tone_start(tune_win[tone_current], 100);
@@ -194,7 +192,7 @@ loop(void)
                 ++tone_current;
             }
         }
-    } else if (player_turn == 0) {
+    } else if (player_turn == 1) {
         player_move();
     } else {
         computer_move();
@@ -322,7 +320,7 @@ heavy()
             --row;
         }
         row++;
-        game_over = check_four(xc, row);
+        game_over = check_three(xc, row);
 
         if (game_over) {
             tone_current = 0;
@@ -334,7 +332,6 @@ heavy()
 void
 next_player(void)
 {
-    ++n_move;
     if (player_turn == 0) {
         player_turn = 1;
     } else {
@@ -343,152 +340,144 @@ next_player(void)
 }
 
 uint8_t
-check_four(byte i, byte j)
+check_three(byte i, byte j)
 {
     byte            in_a_row;
     byte            color = meggyjr_read_pixel(i, j);
-    uint8_t         out = 0;
 
     int             row,
                     col;
 
-    if (out == 0) {
-        cols[0] = i;
-        rows[0] = j;
-        in_a_row = 1;
-        for (row = j - 1; row >= 0; --row) {
-            if (meggyjr_read_pixel(i, row) == color) {
-                cols[in_a_row] = i;
-                rows[in_a_row] = row;
-                ++in_a_row;
-            } else {
-                break;
-            }
+    cols[0] = i;
+    rows[0] = j;
+    in_a_row = 1;
+    for (row = j - 1; row >= 0; --row) {
+        if (meggyjr_read_pixel(i, row) == color) {
+            cols[in_a_row] = i;
+            rows[in_a_row] = row;
+            ++in_a_row;
+        } else {
+            break;
         }
-        if (in_a_row > 3) {
-            out = 1;
+    }
+    if (in_a_row >= 3) {
+        return 1;
+    }
+
+    cols[0] = i;
+    rows[0] = j;
+    in_a_row = 1;
+    for (col = i - 1; col >= 0; --col) {
+        if (meggyjr_read_pixel(col, j) == color) {
+            cols[in_a_row] = col;
+            rows[in_a_row] = j;
+            ++in_a_row;
+        } else {
+            break;
         }
     }
 
-    if (out == 0) {
-        cols[0] = i;
-        rows[0] = j;
-        in_a_row = 1;
-        for (col = i - 1; col >= 0; --col) {
-            if (meggyjr_read_pixel(col, j) == color) {
-                cols[in_a_row] = col;
-                rows[in_a_row] = j;
-                ++in_a_row;
-            } else {
-                break;
-            }
-        }
-
-        for (col = i + 1; col < 8; ++col) {
-            if (meggyjr_read_pixel(col, j) == color) {
-                cols[in_a_row] = col;
-                rows[in_a_row] = j;
-                ++in_a_row;
-            } else {
-                break;
-            }
-        }
-        if (in_a_row > 3) {
-            out = 1;
+    for (col = i + 1; col < 8; ++col) {
+        if (meggyjr_read_pixel(col, j) == color) {
+            cols[in_a_row] = col;
+            rows[in_a_row] = j;
+            ++in_a_row;
+        } else {
+            break;
         }
     }
-
-    if (out == 0) {
-        cols[0] = i;
-        rows[0] = j;
-        in_a_row = 1;
-        col = i - 1;
-        row = j - 1;
-        while (col >= 1 && row >= 0) {
-            if (meggyjr_read_pixel(col, row) == color) {
-                cols[in_a_row] = col;
-                rows[in_a_row] = row;
-                ++in_a_row;
-            } else {
-                break;
-            }
-            --col;
-            --row;
-        }
-
-        col = i + 1;
-        row = j + 1;
-        while (col <= 7 && row <= 6) {
-            if (meggyjr_read_pixel(col, row) == color) {
-                cols[in_a_row] = col;
-                rows[in_a_row] = row;
-                ++in_a_row;
-            } else {
-                break;
-            }
-            ++col;
-            ++row;
-        }
-
-        if (in_a_row > 3) {
-            out = 1;
-        }
+    if (in_a_row >= 3) {
+        return 1;
     }
 
-    if (out == 0) {
-        cols[0] = i;
-        rows[0] = j;
-        in_a_row = 1;
-
-        col = i - 1;
-        row = j + 1;
-        while (col >= 1 && col <= 6) {
-            if (meggyjr_read_pixel(col, row) == color) {
-                cols[in_a_row] = col;
-                rows[in_a_row] = row;
-                ++in_a_row;
-            } else {
-                break;
-            }
-            --col;
-            ++row;
+    cols[0] = i;
+    rows[0] = j;
+    in_a_row = 1;
+    col = i - 1;
+    row = j - 1;
+    while (col >= 1 && row >= 0) {
+        if (meggyjr_read_pixel(col, row) == color) {
+            cols[in_a_row] = col;
+            rows[in_a_row] = row;
+            ++in_a_row;
+        } else {
+            break;
         }
-
-        col = i + 1;
-        row = j - 1;
-        while (col <= 7 && row >= 0) {
-            if (meggyjr_read_pixel(col, row) == color) {
-                cols[in_a_row] = col;
-                rows[in_a_row] = row;
-                ++in_a_row;
-            } else {
-                break;
-            }
-            ++col;
-            --row;
-        }
-
-        if (in_a_row > 3) {
-            out = 1;
-        }
+        --col;
+        --row;
     }
-    return out;
+
+    col = i + 1;
+    row = j + 1;
+    while (col <= 7 && row <= 6) {
+        if (meggyjr_read_pixel(col, row) == color) {
+            cols[in_a_row] = col;
+            rows[in_a_row] = row;
+            ++in_a_row;
+        } else {
+            break;
+        }
+        ++col;
+        ++row;
+    }
+
+    if (in_a_row >= 3) {
+        return 1;
+    }
+
+    cols[0] = i;
+    rows[0] = j;
+    in_a_row = 1;
+
+    col = i - 1;
+    row = j + 1;
+    while (col >= 1 && col <= 6) {
+        if (meggyjr_read_pixel(col, row) == color) {
+            cols[in_a_row] = col;
+            rows[in_a_row] = row;
+            ++in_a_row;
+        } else {
+            break;
+        }
+        --col;
+        ++row;
+    }
+
+    col = i + 1;
+    row = j - 1;
+    while (col <= 7 && row >= 0) {
+        if (meggyjr_read_pixel(col, row) == color) {
+            cols[in_a_row] = col;
+            rows[in_a_row] = row;
+            ++in_a_row;
+        } else {
+            break;
+        }
+        ++col;
+        --row;
+    }
+
+    if (in_a_row >= 3) {
+        return 1;
+    }
+
+    return 0;
 }
 
 void
-flash_four(void)
+flash_three(void)
 {
-    byte            save[4];
+    byte            save[3];
     byte            i;
 
-    for (i = 0; i < 4; ++i) {
+    for (i = 0; i < 3; ++i) {
         save[i] = meggyjr_read_pixel(cols[i], rows[i]);
         meggyjr_draw(cols[i], rows[i], player_colors[2]);
     }
     meggyjr_display_slate();
     avr_thread_sleep(1);
 
-    for (i = 0; i < 4; ++i) {
+    for (i = 0; i < 3; ++i) {
         meggyjr_draw(cols[i], rows[i], save[i]);
     }
     meggyjr_display_slate();
@@ -544,61 +533,46 @@ computer_move(void)
     int             scores[8];
     int             max_score;
 
-    if (n_move < 1) {
-        col = 3;
-        for (; xc > 1; --xc) {
-            meggyjr_draw(xc, yc, Dark);
-            meggyjr_draw(xc - 1, yc, player_colors[player_turn]);
-            meggyjr_display_slate();
-            avr_thread_sleep(1);
+    for (; xc > 1; --xc) {
+        meggyjr_draw(xc, yc, Dark);
+        meggyjr_draw(xc - 1, yc, player_colors[player_turn]);
+        meggyjr_display_slate();
+        avr_thread_sleep(1);
+    }
+    max_score = -1;
+    for (; xc < 6; ++xc) {
+        scores[xc] = calculate_score(xc);
+        if (scores[xc] > -1) {
+            scores[xc] += 4 - ABS(4 - xc);
         }
-        for (; xc != col; ++xc) {
-            meggyjr_draw(xc, yc, Dark);
-            meggyjr_draw(xc + 1, yc, player_colors[player_turn]);
-            meggyjr_display_slate();
-            avr_thread_sleep(1);
-        }
-    } else {
-        for (; xc > 1; --xc) {
-            meggyjr_draw(xc, yc, Dark);
-            meggyjr_draw(xc - 1, yc, player_colors[player_turn]);
-            meggyjr_display_slate();
-            avr_thread_sleep(1);
-        }
-        max_score = -1;
-        for (; xc < 8; ++xc) {
-            scores[xc] = get_score(xc, depth);
-            if (scores[xc] > -1) {
-                scores[xc] += 4 - ABS(4 - xc);
-            }
-            if (scores[xc] > max_score) {
-                max_score = scores[xc];
-                if (max_score == MAX_SCORE + 4 - ABS(4 - xc)) {
-                    break;
-                }
-            }
-            meggyjr_draw(xc, yc, Dark);
-            meggyjr_draw(xc + 1, yc, player_colors[player_turn]);
-            meggyjr_display_slate();
-        }
-        meggyjr_draw(xc, yc, player_colors[player_turn]);
-
-        for (; xc > 0; --xc) {
-            if (scores[xc] == max_score) {
+        if (scores[xc] > max_score) {
+            max_score = scores[xc];
+            if (max_score == MAX_SCORE + 4 - ABS(4 - xc)) {
                 break;
             }
-            meggyjr_draw(xc, yc, Dark);
-            meggyjr_draw(xc - 1, yc, player_colors[player_turn]);
-            meggyjr_display_slate();
-            avr_thread_sleep(1);
         }
+        meggyjr_draw(xc, yc, Dark);
+        meggyjr_draw(xc + 1, yc, player_colors[player_turn]);
+        meggyjr_display_slate();
+    }
+
+    meggyjr_draw(xc, yc, player_colors[player_turn]);
+
+    for (; xc > 0; --xc) {
+        if (scores[xc] == max_score) {
+            break;
+        }
+        meggyjr_draw(xc, yc, Dark);
+        meggyjr_draw(xc - 1, yc, player_colors[player_turn]);
+        meggyjr_display_slate();
+        avr_thread_sleep(1);
     }
 
     heavy();
 }
 
 int
-get_score(byte col, byte depth)
+calculate_score(byte col)
 {
     int             score,
                     opp_scores[8],
@@ -607,9 +581,7 @@ get_score(byte col, byte depth)
                     c;
 
     byte            row,
-                    low_row,
-                    opp_col,
-                    in_a_row;
+                    opp_col;
 
     score = 0;
 
@@ -623,44 +595,23 @@ get_score(byte col, byte depth)
         }
         meggyjr_draw(col, row, player_colors[player_turn]);
 
-        if (check_four(col, row)) {
+        if (check_three(col, row)) {
             score = MAX_SCORE;
         }
         meggyjr_draw(col, row, Dark);
 
         if (score < MAX_SCORE) {
-            if (depth == 0) {
-                score = 0;
-                for (r = row - 1; r < row + 1; ++r) {
-                    for (c = col - 1; c <= col + 1; ++c) {
-                        if (c > 0 && c < 8) {
-                            if (r >= 0 && r < 6) {
-                                score += meggyjr_read_pixel(r, c);
-                            }
+            score = 0;
+            for (r = row - 1; r < row + 1; ++r) {
+                for (c = col - 1; c <= col + 1; ++c) {
+                    if (c > 0 && c < 8) {
+                        if (r >= 0 && r < 6) {
+                            score += meggyjr_read_pixel(r, c);
                         }
                     }
                 }
             }
-        } else {
-            meggyjr_draw(col, row, player_colors[player_turn]);
-            player_turn = !player_turn;
-
-            opp_max_score = -MAX_SCORE;
-            for (opp_col = 1; opp_col < 8; ++opp_col) {
-                opp_scores[opp_col] = get_score(opp_col, depth - 1);
-                if (opp_scores[opp_col] > opp_max_score) {
-                    opp_max_score = opp_scores[opp_col];
-                    if (opp_max_score == MAX_SCORE) {
-                        break;
-                    }
-                }
-            }
-
-            meggyjr_draw(col, row, Dark);
-            player_turn = !player_turn;
-            score = (MAX_SCORE - opp_max_score) / 2;
         }
     }
     return score;
 }
-

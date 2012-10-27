@@ -40,7 +40,7 @@ struct avr_thread_context {
     volatile struct avr_thread_context *wait_queue_next;
     volatile struct avr_thread_context *next_joined;
 #ifdef SANITY
-    void *owning;
+    void           *owning;
 #endif
 };
 
@@ -113,16 +113,16 @@ void            avr_thread_join(struct avr_thread_context *t);
 struct avr_thread_mutex *avr_thread_mutex_create(void);
 
 void            avr_thread_mutex_destory(volatile struct
-                                               avr_thread_mutex
-                                               *mutex);
+                                         avr_thread_mutex
+                                         *mutex);
 
 void            avr_thread_mutex_acquire(volatile struct
-                                               avr_thread_mutex
-                                               *mutex);
+                                         avr_thread_mutex
+                                         *mutex);
 
 void            avr_thread_mutex_release(volatile struct
-                                               avr_thread_mutex
-                                               *mutex);
+                                         avr_thread_mutex
+                                         *mutex);
 
 // Semaphores
 struct avr_thread_semaphore *avr_thread_semaphore_create(int value);

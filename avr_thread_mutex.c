@@ -26,7 +26,7 @@ avr_thread_mutex_create(void)
 
 void
 avr_thread_mutex_destory(volatile struct avr_thread_mutex
-                               *mutex)
+                         *mutex)
 {
     uint8_t         sreg;
 
@@ -43,7 +43,7 @@ avr_thread_mutex_destory(volatile struct avr_thread_mutex
 
 void
 avr_thread_mutex_acquire(volatile struct avr_thread_mutex
-                               *mutex)
+                         *mutex)
 {
     uint8_t         sreg;
     volatile struct avr_thread_context *t,
@@ -98,7 +98,7 @@ avr_thread_mutex_acquire(volatile struct avr_thread_mutex
 
 void
 avr_thread_mutex_release(volatile struct avr_thread_mutex
-                               *mutex)
+                         *mutex)
 {
     uint8_t         sreg = SREG;
     cli();
