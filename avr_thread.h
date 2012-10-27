@@ -37,14 +37,11 @@ struct avr_thread_context {
     volatile struct avr_thread_context *run_queue_prev;
     volatile struct avr_thread_context *run_queue_next;
     volatile struct avr_thread_context *sleep_queue_next;
-    volatile struct avr_thread_context *next_joined;
     volatile struct avr_thread_context *wait_queue_next;
-#ifdef DEBUG
-    void           *waiting_for;        // a mutex or a semaphore.
-#endif
+    volatile struct avr_thread_context *next_joined;
 };
 
-struct avr_thread_basic_mutex {
+struct avr_thread_mutex {
     /*
      * There will be a loop of this form:
      *
@@ -60,13 +57,13 @@ struct avr_thread_basic_mutex {
 };
 
 struct avr_thread_semaphore {
-    volatile struct avr_thread_basic_mutex *mutex;
+    volatile struct avr_thread_mutex *mutex;
     volatile uint8_t lock_count;
     volatile struct avr_thread_context *wait_queue;
 };
 
 struct avr_thread_mutex_rw_lock {
-    volatile struct avr_thread_basic_mutex *mutex;
+    volatile struct avr_thread_mutex *mutex;
     volatile struct avr_thread_semaphore *writeSem;
     volatile struct avr_thread_semaphore *readerSem;
     volatile int8_t readerCount;
@@ -110,18 +107,18 @@ void            avr_thread_join(struct avr_thread_context *t);
  */
 
 // Basic mutex
-struct avr_thread_basic_mutex *avr_thread_basic_mutex_create(void);
+struct avr_thread_mutex *avr_thread_mutex_create(void);
 
-void            avr_thread_basic_mutex_destory(volatile struct
-                                               avr_thread_basic_mutex
+void            avr_thread_mutex_destory(volatile struct
+                                               avr_thread_mutex
                                                *mutex);
 
-void            avr_thread_basic_mutex_acquire(volatile struct
-                                               avr_thread_basic_mutex
+void            avr_thread_mutex_acquire(volatile struct
+                                               avr_thread_mutex
                                                *mutex);
 
-void            avr_thread_basic_mutex_release(volatile struct
-                                               avr_thread_basic_mutex
+void            avr_thread_mutex_release(volatile struct
+                                               avr_thread_mutex
                                                *mutex);
 
 // Semaphores

@@ -9,23 +9,23 @@
 static int8_t   avr_thread_atomic_add(int8_t x, int8_t delta);
 
 
-struct avr_thread_basic_mutex *
-avr_thread_basic_mutex_create(void)
+struct avr_thread_mutex *
+avr_thread_mutex_create(void)
 {
-    struct avr_thread_basic_mutex *mutex;
+    struct avr_thread_mutex *mutex;
 
-    mutex = malloc(sizeof(struct avr_thread_basic_mutex));
+    mutex = malloc(sizeof(struct avr_thread_mutex));
     if (mutex == NULL) {
         return NULL;
     }
     mutex->locked = 0;
-    mutex->wait_queue = NULL; 
+    mutex->wait_queue = NULL;
 
     return mutex;
 }
 
 void
-avr_thread_basic_mutex_destory(volatile struct avr_thread_basic_mutex
+avr_thread_mutex_destory(volatile struct avr_thread_mutex
                                *mutex)
 {
     uint8_t         sreg;
@@ -42,7 +42,7 @@ avr_thread_basic_mutex_destory(volatile struct avr_thread_basic_mutex
 }
 
 void
-avr_thread_basic_mutex_acquire(volatile struct avr_thread_basic_mutex
+avr_thread_mutex_acquire(volatile struct avr_thread_mutex
                                *mutex)
 {
     uint8_t         sreg;
@@ -63,11 +63,14 @@ avr_thread_basic_mutex_acquire(volatile struct avr_thread_basic_mutex
             SREG = sreg;
             return;
         } else {
-            /* TODO
-            SREG = sreg;
-            avr_thread_yield();
-            continue;
-            */
+            /**
+             * //Or, you can do busy waiting here.
+             *
+             * SREG = sreg;
+             * avr_thread_yield();
+             * continue;
+             *
+             */
 
             t = mutex->wait_queue;
             p = NULL;
@@ -92,7 +95,7 @@ avr_thread_basic_mutex_acquire(volatile struct avr_thread_basic_mutex
 }
 
 void
-avr_thread_basic_mutex_release(volatile struct avr_thread_basic_mutex
+avr_thread_mutex_release(volatile struct avr_thread_mutex
                                *mutex)
 {
     uint8_t         sreg = SREG;
@@ -128,9 +131,6 @@ avr_thread_semaphore_create(int value)
 {
     struct avr_thread_semaphore *sem;
 
-    /*
-     * Semaphore is always non-negative.
-     */
     if (value < 0) {
         return NULL;
     }
@@ -140,15 +140,19 @@ avr_thread_semaphore_create(int value)
         return NULL;
     }
     sem->lock_count = value;
-    sem->mutex = avr_thread_basic_mutex_create();
+    sem->mutex = avr_thread_mutex_create();
     if (sem->mutex == NULL) {
         return NULL;
     }
+    sem->wait_queue = NULL;
 
     return sem;
 }
 
-/*
+/**
+ * Consider what will happen if one thread does down() and then destory
+ * the semaphore?
+ *
  * It would be _your_ fault if you call this function twice on a same
  * semaphore.
  */
@@ -160,7 +164,7 @@ avr_thread_semaphore_destroy(volatile struct avr_thread_semaphore *sem)
     cli();
     if (sem != NULL) {
         if (sem->mutex != NULL) {
-            avr_thread_basic_mutex_destory(sem->mutex);
+            avr_thread_mutex_destory(sem->mutex);
             sem->mutex = NULL;  /* This will work. */
         }
         free(sem);
@@ -177,13 +181,16 @@ avr_thread_sem_up(volatile struct avr_thread_semaphore *sem)
         /*
          * TODO
          * Return error messages.
+         * I am thinking of killing the calling thread.
+         * It is a pity that I cannot do that.
          */
         return;
     }
-    avr_thread_basic_mutex_acquire(sem->mutex);
+    avr_thread_mutex_acquire(sem->mutex);
     ++(sem->lock_count);
     /*
-     * Since we have only up() once, we only need to wake up one waiting thread.
+     * Since we have only up() once, we only need to wake up one
+     * waiting thread.
      */
     if (sem->wait_queue != NULL) {
         sem->wait_queue->state = ats_runnable;
@@ -191,7 +198,7 @@ avr_thread_sem_up(volatile struct avr_thread_semaphore *sem)
         sem->wait_queue = sem->wait_queue->wait_queue_next;
     }
 
-    avr_thread_basic_mutex_release(sem->mutex);
+    avr_thread_mutex_release(sem->mutex);
 }
 
 void
@@ -201,26 +208,30 @@ avr_thread_sem_down(volatile struct avr_thread_semaphore *sem)
                    *p;
     if (sem == NULL || sem->mutex == NULL) {
         /*
-         * TODO
          * Return error messages.
          */
         return;
     }
 
     /*
-     * acquire the mutex -> check the value ->
+     * We do not need to cei() here because the reading/writing to the
+     * value of semaphore are protected by its mutex.
+     */
+
+    /*
+     * The flow is:
+     *
+     * acquire the mutex -> check the value of the semaphore ->
+     *
      * a. if the value is 0, release the mutex (so that other threads
-     * can acquire the mutex and change the value) -> start over.
+     * can acquire the mutex and change the value) -> loop.
+     *
      * b. otherwise, decrement the value (this opearting is safe as we
      * are holding the mutex -> release the mutex -> return
      */
     while (1) {
-        avr_thread_basic_mutex_acquire(sem->mutex);
+        avr_thread_mutex_acquire(sem->mutex);
         if (sem->lock_count == 0) {
-            /*
-             * This is an O(n) operation. This can be improved to O(1) by
-             * adding a `tail' attribute to the avr_thread_semaphore struct.
-             */
             t = sem->wait_queue;
             p = NULL;
             while (t != NULL) {
@@ -235,20 +246,20 @@ avr_thread_sem_down(volatile struct avr_thread_semaphore *sem)
                     p->wait_queue_next;
                 p->wait_queue_next = avr_thread_active_context;
             }
-#ifdef DEBUG
-            avr_thread_active_context->waiting_for = sem;
-#endif
-            avr_thread_basic_mutex_release(sem->mutex);
+            avr_thread_mutex_release(sem->mutex);
             avr_thread_active_context->state = ats_waiting;
             avr_thread_yield();
         } else {
             --(sem->lock_count);
-            avr_thread_basic_mutex_release(sem->mutex);
+            avr_thread_mutex_release(sem->mutex);
             return;
         }
     }
 }
 
+/*
+ * Simulates the atomic addition operation on other architecture.
+ */
 static          int8_t
 avr_thread_atomic_add(int8_t x, int8_t delta)
 {
@@ -260,6 +271,10 @@ avr_thread_atomic_add(int8_t x, int8_t delta)
     return x;
 }
 
+/*
+ * The following implementation was adapted from Google's Go programming
+ * language.
+ */
 #define rwmutexMaxReaders 10
 
 struct avr_thread_mutex_rw_lock *
@@ -270,7 +285,7 @@ avr_thread_mutex_rw_create(void)
     if (r == NULL) {
         return NULL;
     }
-    r->mutex = avr_thread_basic_mutex_create();
+    r->mutex = avr_thread_mutex_create();
     r->writeSem = avr_thread_semaphore_create(0);
     r->readerSem = avr_thread_semaphore_create(0);
     r->readerCount = 0;
@@ -285,7 +300,7 @@ avr_thread_mutex_rw_destroy(volatile struct avr_thread_mutex_rw_lock
     if (rwlock == NULL) {
         return;
     }
-    avr_thread_basic_mutex_destory(rwlock->mutex);
+    avr_thread_mutex_destory(rwlock->mutex);
     avr_thread_semaphore_destroy(rwlock->writeSem);
     avr_thread_semaphore_destroy(rwlock->readerSem);
     free(rwlock);
@@ -321,7 +336,7 @@ avr_thread_mutex_rw_wlock(volatile struct avr_thread_mutex_rw_lock *rwlock)
 {
     int8_t          r;
 
-    avr_thread_basic_mutex_acquire(rwlock->mutex);
+    avr_thread_mutex_acquire(rwlock->mutex);
 
     r = avr_thread_atomic_add(rwlock->readerCount, -rwmutexMaxReaders) +
         rwmutexMaxReaders;
@@ -342,5 +357,5 @@ avr_thread_mutex_rw_wunlock(volatile struct avr_thread_mutex_rw_lock
         avr_thread_sem_down(rwlock->readerSem);
     }
 
-    avr_thread_basic_mutex_release(rwlock->mutex);
+    avr_thread_mutex_release(rwlock->mutex);
 }
