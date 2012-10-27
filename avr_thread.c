@@ -38,8 +38,8 @@ static volatile struct avr_thread_context
 static void     avr_thread_run_queue_remove(volatile struct
                                             avr_thread_context *t);
 
-static void     avr_thread_sleep_queue_remove(volatile struct avr_thread_context
-                                              *t);
+static void     avr_thread_sleep_queue_remove(volatile struct
+                                              avr_thread_context *t);
 
 static void     avr_thread_idle_entry(void);
 
@@ -187,6 +187,10 @@ avr_thread_self_deconstruct(void)
 
     t = avr_thread_active_context->next_joined;
 
+    /*
+     * Marks the threads that are joined to the current thread active
+     * and push the threads to the run queue.
+     */
     while (t != NULL) {
         t->state = ats_runnable;
         avr_thread_run_queue_push(t);
@@ -323,7 +327,7 @@ avr_thread_init_thread(volatile struct avr_thread_context *t,
     t->ticks = QUANTUM;
     t->state = ats_runnable;
 
-    t->wait_queue_next = NULL;
+    t->next_joined = NULL;
     return;
 }
 
@@ -525,6 +529,12 @@ avr_thread_yield(void)
     ints = SREG & 0x80;
     cli();
 
+    /*
+     * This function may be called directly from the active thread.
+     * We need to put hte current thraed back to the run queue if the
+     * current thread is still runnable (i.e., this function is called
+     * by other functions in this library.)
+     */
     if (avr_thread_active_context->state == ats_runnable) {
         avr_thread_run_queue_push(avr_thread_active_context);
     }
@@ -549,6 +559,9 @@ avr_thread_yield(void)
 void
 avr_thread_save_sp(uint8_t * sp)
 {
+    /*
+     * Do you see why?
+     */
     sp += 2;
     avr_thread_prev_context->sp = sp;
 }
