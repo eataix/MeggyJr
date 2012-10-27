@@ -228,7 +228,7 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
 
     SPCR = 80;
 
-    if ((cb + current_column) == 0 || (cb+ current_column) == 4) {
+    if ((cb + current_column) == 0 || (cb + current_column) == 4) {
         SPDR = leds;
     } else {
         SPDR = 0;
