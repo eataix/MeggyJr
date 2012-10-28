@@ -43,8 +43,9 @@ static void     avr_thread_sleep_queue_remove(volatile struct
 
 static void     avr_thread_idle_entry(void);
 
-static void     avr_thread_init_thread(volatile struct avr_thread_context
-                                       *t, void        (*entry) (void),
+static void     avr_thread_init_thread(volatile struct
+                                       avr_thread_context *t,
+                                       void (*entry) (void),
                                        uint8_t * stack,
                                        uint16_t stack_size,
                                        uint8_t priority);

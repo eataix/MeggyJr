@@ -10,7 +10,57 @@
 #define FPS 120
 #define F_CPU 16000000UL
 
-// Predefined Colors: 
+/*
+ * For the MeggyJr I have, the second colour table gives the desirable
+ * output.
+ */
+#define UseNewColors
+
+/*
+ * Predefined Colors: 
+ */
+#ifdef UseColorMap3
+
+#define MeggyDark      0,  0,   0
+#define MeggyRed       12,  0,   0
+#define MeggyOrange   12,  1,   0
+#define MeggyYellow    10,  4,  0
+#define MeggyGreen     0,  5,  0
+#define MeggyBlue      0,   0,  5
+#define MeggyViolet    8,   0,  4
+#define MeggyWhite     14,  4,  2
+
+#define MeggyDimRed    4,  0,   0
+#define MeggyDimGreen  0,  1,   0
+#define MeggyDimBlue   0,  0,   1
+#define MeggyDimOrange 6,  1,   0
+#define MeggydimYellow 4,  1,   0
+#define MeggydimAqua   0,  3,   1
+#define MeggydimViolet 2,  0,   1
+
+#else
+
+#ifdef UseNewColors
+
+#define MeggyDark      0,  0,   0
+#define MeggyRed       6,  0,   0
+#define MeggyOrange   12,  1,   0
+#define MeggyYellow    10,  4,  0
+#define MeggyGreen     0,  6,  0
+#define MeggyBlue      0,   0,  5
+#define MeggyViolet    8,   0,  4
+#define MeggyWhite     7,  4,  2
+
+#define MeggyDimRed    2,  0,   0
+#define MeggyDimGreen  0,  1,   0
+#define MeggyDimBlue   0,  0,   1
+#define MeggyDimOrange 5,  1,   0
+#define MeggydimYellow 3,  1,   0
+#define MeggydimAqua   0,  3,   1
+#define MeggydimViolet 2,  0,   1
+
+#else
+
 #define MeggyDark      0,  0,   0
 #define MeggyRed       6,  0,   0
 #define MeggyOrange   12,  5,   0
@@ -27,6 +77,10 @@
 #define MeggydimYellow 1,  1,   0
 #define MeggydimAqua   0,  3,   1
 #define MeggydimViolet 2,  0,   1
+
+#endif
+
+#endif
 
 extern volatile byte leds;
 
