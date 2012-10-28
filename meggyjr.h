@@ -25,7 +25,8 @@
 
 #define DIMENSION 8
 
-#define MeggyCursorColor   15,15,15     // You can define color constants
+#define MeggyCursorColor   15,15,15     // You can define color
+                                        // constants
                                         // like this.
 #define byte uint8_t
 
@@ -40,10 +41,13 @@ extern volatile byte meggyjr_button_right;
 // Assign those colors names that we can use:
 enum colors {
     Dark, Red, Orange, Yellow, Green, Blue, Violet, White,
-    DimRed, DimOrange, DimYellow, DimGreen, DimAqua, DimBlue, DimViolet,
+    DimRed, DimOrange, DimYellow, DimGreen, DimAqua, DimBlue,
+    DimViolet,
     FullOn,
-    CustomColor0, CustomColor1, CustomColor2, CustomColor3, CustomColor4,
-    CustomColor5, CustomColor6, CustomColor7, CustomColor8, CustomColor9
+    CustomColor0, CustomColor1, CustomColor2, CustomColor3,
+    CustomColor4,
+    CustomColor5, CustomColor6, CustomColor7, CustomColor8,
+    CustomColor9
 };
 
 /*

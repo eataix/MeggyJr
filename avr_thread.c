@@ -4,25 +4,27 @@
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS''
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <stdlib.h>
@@ -131,7 +133,8 @@ void            avr_thread_switch_to_without_save(uint8_t *
  * Prototypes
  * ==========
  */
-static void     avr_thread_run_queue_push(volatile struct avr_thread *t);
+static void     avr_thread_run_queue_push(volatile struct avr_thread
+                                          *t);
 
 static volatile struct avr_thread *avr_thread_run_queue_pop(void);
 
@@ -152,7 +155,8 @@ static void     avr_thread_init_thread(volatile
                                        void (*entry) (void),
                                        uint8_t * stack,
                                        uint16_t stack_size,
-                                       enum avr_thread_priority priority);
+                                       enum avr_thread_priority
+                                       priority);
 
 static void     avr_thread_self_deconstruct(void);
 
@@ -247,7 +251,8 @@ avr_thread_init(uint16_t main_stack_size,
 
 struct avr_thread *
 avr_thread_create(void (*entry) (void), uint8_t * stack,
-                  uint16_t stack_size, enum avr_thread_priority priority)
+                  uint16_t stack_size,
+                  enum avr_thread_priority priority)
 {
     uint8_t         ints;
     struct avr_thread *t;
@@ -281,8 +286,9 @@ avr_thread_create(void (*entry) (void), uint8_t * stack,
 }
 
 static void
-avr_thread_init_thread(volatile struct avr_thread *t, void (*entry) (void),
-                       uint8_t * stack, uint16_t stack_size,
+avr_thread_init_thread(volatile struct avr_thread *t,
+                       void (*entry) (void), uint8_t * stack,
+                       uint16_t stack_size,
                        enum avr_thread_priority priority)
 {
     uint8_t         i;
@@ -305,7 +311,8 @@ avr_thread_init_thread(volatile struct avr_thread *t, void (*entry) (void),
      */
     *t->sp = (uint8_t) (uint16_t) avr_thread_self_deconstruct;
     --(t->sp);
-    *t->sp = (uint8_t) (((uint16_t) avr_thread_self_deconstruct) >> 8);
+    *t->sp =
+        (uint8_t) (((uint16_t) avr_thread_self_deconstruct) >> 8);
     --(t->sp);
 
     /*
@@ -371,7 +378,8 @@ avr_thread_tick(uint8_t * saved_sp)
         avr_thread_prev_thread = avr_thread_active_thread;
         avr_thread_active_thread = avr_thread_run_queue_pop();
         avr_thread_run_queue_push(avr_thread_prev_thread);
-        avr_thread_prev_thread->ticks = avr_thread_prev_thread->quantum;
+        avr_thread_prev_thread->ticks =
+            avr_thread_prev_thread->quantum;
         avr_thread_active_thread->ticks =
             avr_thread_active_thread->quantum;
     } else {
@@ -591,11 +599,13 @@ avr_thread_yield(void)
         free(avr_thread_prev_thread);
         avr_thread_active_thread->ticks =
             avr_thread_active_thread->quantum;
-        avr_thread_switch_to_without_save(avr_thread_active_thread->sp);
+        avr_thread_switch_to_without_save
+            (avr_thread_active_thread->sp);
     } else {
         avr_thread_prev_thread = avr_thread_active_thread;
         avr_thread_active_thread = t;
-        avr_thread_prev_thread->ticks = avr_thread_prev_thread->quantum;
+        avr_thread_prev_thread->ticks =
+            avr_thread_prev_thread->quantum;
         avr_thread_active_thread->ticks =
             avr_thread_active_thread->quantum;
         avr_thread_switch_to(avr_thread_active_thread->sp);
@@ -924,7 +934,8 @@ avr_thread_semaphore_init(int value)
  * semaphore.
  */
 void
-avr_thread_semaphore_destroy(volatile struct avr_thread_semaphore *sem)
+avr_thread_semaphore_destroy(volatile struct avr_thread_semaphore
+                             *sem)
 {
     uint8_t         sreg;
     sreg = SREG;
@@ -1094,7 +1105,8 @@ avr_thread_rwlock_rdunlock(volatile struct avr_thread_rwlock *rwlock)
         return;
     }
     if (avr_thread_atomic_add(rwlock->num_reader, -1) < 0) {
-        if (avr_thread_atomic_add(rwlock->num_waiting_reader, -1) == 0) {
+        if (avr_thread_atomic_add(rwlock->num_waiting_reader, -1) ==
+            0) {
             avr_thread_sem_up(rwlock->writer_sem);
         }
     }
@@ -1110,7 +1122,8 @@ avr_thread_rwlock_wrlock(volatile struct avr_thread_rwlock *rwlock)
     r = avr_thread_atomic_add(rwlock->num_reader, -MAX_READER) +
         MAX_READER;
     if (r != 0
-        && avr_thread_atomic_add(rwlock->num_waiting_reader, r) != 0) {
+        && avr_thread_atomic_add(rwlock->num_waiting_reader,
+                                 r) != 0) {
         avr_thread_sem_down(rwlock->writer_sem);
     }
 }

@@ -168,8 +168,8 @@ meggyjr_display_slate(void)
     for (i = 0; i < 8; ++i) {
         for (j = 0; j < 8; ++j) {
             meggyjr_set_pixel_color(i, j,
-                                    meggyjr_colour_table[meggyjr_game_slate
-                                                         [i][j]]);
+                                    meggyjr_colour_table
+                                    [meggyjr_game_slate[i][j]]);
         }
     }
 }
