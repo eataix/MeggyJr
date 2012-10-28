@@ -8,9 +8,15 @@
 
 #define IDLE_THREAD_STACK_SIZE 60
 
+/**
+ * Data structures
+ * ===============
+ * Here are the _definition_ of data structures.
+ */
+
 struct avr_thread {
     /*
-     * I am WARNING you: DO NOT TOUCH THESE MEMBERS.
+     * I am WARNING you: DO NOT TOUCH THESE MEMBERS in your program.
      */
     volatile enum avr_thread_state state;
     uint8_t        *stack;      /* Debug purpose */
@@ -28,18 +34,6 @@ struct avr_thread {
 #ifdef SANITY
     void           *owning;
 #endif
-};
-
-
-struct avr_thread_rwlock {
-    /*
-     * I know you may not listen, yet do NOT touch these members.
-     */
-    volatile struct avr_thread_mutex *mutex;
-    volatile struct avr_thread_semaphore *writer_sem;
-    volatile struct avr_thread_semaphore *reader_sem;
-    volatile int8_t num_reader;
-    volatile int8_t num_waiting_reader;
 };
 
 struct avr_thread_mutex {
@@ -66,11 +60,26 @@ struct avr_thread_semaphore {
     volatile struct avr_thread *wait_queue;
 };
 
+struct avr_thread_rwlock {
+    /*
+     * I know you may not listen, yet do NOT touch these members.
+     */
+    volatile struct avr_thread_mutex *mutex;
+    volatile struct avr_thread_semaphore *writer_sem;
+    volatile struct avr_thread_semaphore *reader_sem;
+    volatile int8_t num_reader;
+    volatile int8_t num_waiting_reader;
+};
 
-/*
+/**
  * Variables
+ * =========
  */
-volatile struct avr_thread *avr_thread_active_thread;
+static struct avr_thread *avr_thread_main_thread;
+
+static struct avr_thread *avr_thread_idle_thread;
+
+static volatile struct avr_thread *avr_thread_active_thread;
 
 static volatile struct avr_thread *avr_thread_prev_thread;
 
@@ -78,21 +87,22 @@ static volatile struct avr_thread *avr_thread_run_queue;
 
 static volatile struct avr_thread *avr_thread_sleep_queue;
 
-static struct avr_thread *avr_thread_main_thread;
-
-static struct avr_thread *avr_thread_idle_thread;
-
 static uint8_t  avr_thread_idle_stack[IDLE_THREAD_STACK_SIZE];
 
-
 /*
- * Prototypes
+ * Note:
+ * These two `functions' are actually assembly procedures. There are
+ * in `avr_thread_switch.S'. I put a prototype here so that the compiler
+ * can check the type for me.
  */
 void            avr_thread_switch_to(uint8_t * new_stack_pointer);
 void            avr_thread_switch_to_without_save(uint8_t *
                                                   new_stack_pointer);
 
-
+/**
+ * Prototypes
+ * ==========
+ */
 static void     avr_thread_run_queue_push(volatile struct avr_thread *t);
 
 static volatile struct avr_thread *avr_thread_run_queue_pop(void);
@@ -105,6 +115,10 @@ static void     avr_thread_sleep_queue_remove(volatile
 
 static void     avr_thread_idle_thread_entry(void);
 
+/*
+ * Initialise a particular thread. Do not confuse this with
+ * avr_thread_init(), which is used to initialise the whole library.
+ */
 static void     avr_thread_init_thread(volatile
                                        struct avr_thread *t,
                                        void (*entry) (void),
@@ -116,9 +130,9 @@ static void     avr_thread_self_deconstruct(void);
 
 static int8_t   avr_thread_atomic_add(int8_t x, int8_t delta);
 
-
-/*
- * Let the current active thread sleep for `ticks' ticks.
+/**
+ * Implementations
+ * ===============
  */
 void
 avr_thread_sleep(uint16_t ticks)
@@ -238,7 +252,7 @@ avr_thread_idle_thread_entry(void)
 }
 
 /*
- * Destruct the active thread.
+ * Deconstructs the active thread.
  */
 static void
 avr_thread_self_deconstruct(void)
