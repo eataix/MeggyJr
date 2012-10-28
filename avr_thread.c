@@ -224,7 +224,7 @@ avr_thread_init(uint16_t main_stack_size, uint8_t main_priority)
     avr_thread_idle_thread =
         avr_thread_create(avr_thread_idle_thread_entry,
                           avr_thread_idle_stack,
-                          sizeof(avr_thread_idle_stack), atp_noromal);
+                          sizeof(avr_thread_idle_stack), atp_normal);
 
     avr_thread_run_queue_remove(avr_thread_idle_thread);
 

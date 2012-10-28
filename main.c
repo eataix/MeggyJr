@@ -120,7 +120,7 @@ main(void)
     meggyjr_setup();
     meggyjr_clear_slate();
     sei();
-    main_thread = avr_thread_init(300, atp_noromal);
+    main_thread = avr_thread_init(300, atp_normal);
 
     button_a = 0;
     button_up = 0;
@@ -131,10 +131,10 @@ main(void)
     mutex = avr_thread_mutex_init();
 
     key_thread = avr_thread_create(key_entry, key_stack,
-                                   sizeof key_stack, atp_noromal);
+                                   sizeof key_stack, atp_normal);
 
     led_thread = avr_thread_create(led_entry, led_stack,
-                                   sizeof led_stack, atp_noromal);
+                                   sizeof led_stack, atp_normal);
 
     xc = 6;
     yc = 6;

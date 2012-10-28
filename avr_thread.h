@@ -22,7 +22,8 @@ enum avr_thread_state {
 };
 
 enum avr_thread_priority {
-    atp_noromal,
+    atp_normal,
+    atp_important,
     atp_critical
 };
 
