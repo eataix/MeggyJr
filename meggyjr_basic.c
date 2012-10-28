@@ -203,7 +203,7 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
             ++num_redraws;
             if (num_redraws == FPS / FIRE_PER_SEC) {
                 num_redraws = 0;
-                SP = avr_thread_tick(SP);
+                SP = (uint16_t) avr_thread_tick((uint8_t *) SP);
             }
         } else {
             current_column_ptr += 24;   // 3 * 8

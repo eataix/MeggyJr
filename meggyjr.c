@@ -122,13 +122,6 @@ meggyjr_draw(byte x, byte y, byte colour)
     meggyjr_game_slate[x][y] = colour;
 }
 
-void
-meggyjr_safe_draw(byte x, byte y, byte color)
-{
-    if ((x >= 0) && (x <= 7) && (y >= 0) && (y <= 7))
-        meggyjr_game_slate[x][y] = color;
-}
-
 byte
 meggyjr_read_pixel(byte x, byte y)
 {

@@ -38,8 +38,6 @@ void            meggyjr_set_led_binary(byte n);
 
 void            meggyjr_draw(byte x, byte y, byte colour);
 
-void            meggyjr_safe_draw(byte x, byte y, byte color);
-
 byte            meggyjr_read_pixel(byte x, byte y);
 
 void            meggyjr_clear_slate(void);

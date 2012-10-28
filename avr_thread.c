@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 
 #include <avr/io.h>
@@ -6,7 +7,7 @@
 #define _EXPORT_INTERNAL
 #include "avr_thread.h"
 
-#define IDLE_THREAD_STACK_SIZE 64
+#define IDLE_THREAD_STACK_SIZE 60
 
 /*
  * Variables
@@ -21,8 +22,6 @@ static volatile avr_thread *avr_thread_sleep_queue;
 
 static avr_thread *avr_thread_main_thread;
 
-static avr_thread avr_thread_pool[MAX_NUM_THREADS];
-
 static avr_thread *avr_thread_idle_thread;
 
 static uint8_t  avr_thread_idle_stack[IDLE_THREAD_STACK_SIZE];
@@ -31,20 +30,21 @@ static uint8_t  avr_thread_idle_stack[IDLE_THREAD_STACK_SIZE];
  * Prototypes
  */
 void            avr_thread_switch_to(uint8_t * new_stack_pointer);
+void            avr_thread_switch_to_without_save(uint8_t *
+                                                  new_stack_pointer);
 
-static volatile avr_thread
-               *avr_thread_run_queue_pop(void);
+static volatile avr_thread * avr_thread_run_queue_pop(void);
 
 static void     avr_thread_run_queue_remove(volatile
-                                            avr_thread *t);
+                                            avr_thread * t);
 
 static void     avr_thread_sleep_queue_remove(volatile
-                                              avr_thread *t);
+                                              avr_thread * t);
 
 static void     avr_thread_idle_thread_entry(void);
 
 static void     avr_thread_init_thread(volatile
-                                       avr_thread *t,
+                                       avr_thread * t,
                                        void (*entry) (void),
                                        uint8_t * stack,
                                        uint16_t stack_size,
@@ -146,7 +146,8 @@ avr_thread_tick(uint8_t * saved_sp)
         avr_thread_active_thread = avr_thread_run_queue_pop();
         avr_thread_run_queue_push(avr_thread_prev_thread);
         avr_thread_prev_thread->ticks = avr_thread_prev_thread->quantum;
-        avr_thread_active_thread->ticks = avr_thread_active_thread->quantum;
+        avr_thread_active_thread->ticks =
+            avr_thread_active_thread->quantum;
     } else {
         --(avr_thread_active_thread->ticks);
         if (avr_thread_active_thread->ticks <= 0) {
@@ -204,11 +205,10 @@ avr_thread_self_deconstruct(void)
     avr_thread_yield();
 }
 
-avr_thread *
+avr_thread     *
 avr_thread_init(uint16_t main_stack_size, uint8_t main_priority)
 {
-    uint8_t         i,
-                    ints;
+    uint8_t         ints;
 
     ints = SREG & 0x80;
     cli();
@@ -216,9 +216,6 @@ avr_thread_init(uint16_t main_stack_size, uint8_t main_priority)
     avr_thread_run_queue = NULL;
     avr_thread_sleep_queue = NULL;
 
-    for (i = 0; i < MAX_NUM_THREADS; ++i) {
-        avr_thread_pool[i].state = ats_invalid;
-    }
 
     // Initialise the idle context.
     avr_thread_idle_thread =
@@ -243,13 +240,12 @@ avr_thread_init(uint16_t main_stack_size, uint8_t main_priority)
     return avr_thread_main_thread;
 }
 
-avr_thread *
+avr_thread     *
 avr_thread_create(void (*entry) (void), uint8_t * stack,
                   uint16_t stack_size, uint8_t priority)
 {
-    uint8_t         i,
-                    ints;
-    avr_thread *t;
+    uint8_t         ints;
+    avr_thread     *t;
 
     ints = SREG & 0x80;
     cli();
@@ -259,21 +255,16 @@ avr_thread_create(void (*entry) (void), uint8_t * stack,
         return NULL;
     }
 
-    for (i = 0; i < MAX_NUM_THREADS; ++i) {
-        if (avr_thread_pool[i].state == ats_invalid) {
-            break;
-        }
-    }
+    t = malloc(sizeof(avr_thread));
 
-    if (i == MAX_NUM_THREADS) {
+    if (t == NULL) {
         SREG |= ints;
         return NULL;
     }
 
-    t = &(avr_thread_pool[i]);
     avr_thread_init_thread(t, entry, stack, stack_size, priority);
+    t->state = ats_runnable;
     avr_thread_run_queue_push(t);
-    avr_thread_pool[i].state = ats_runnable;
 
     /*
      * if (t->priority > avr_thread_active_thread->priority) {
@@ -285,7 +276,7 @@ avr_thread_create(void (*entry) (void), uint8_t * stack,
 }
 
 static void
-avr_thread_init_thread(volatile avr_thread *t,
+avr_thread_init_thread(volatile avr_thread * t,
                        void (*entry) (void), uint8_t * stack,
                        uint16_t stack_size, uint8_t priority)
 {
@@ -339,7 +330,7 @@ avr_thread_init_thread(volatile avr_thread *t,
 }
 
 void
-avr_thread_run_queue_push(volatile avr_thread *t)
+avr_thread_run_queue_push(volatile avr_thread * t)
 {
     volatile avr_thread *r;
 
@@ -395,7 +386,7 @@ avr_thread_run_queue_pop(void)
 }
 
 static void
-avr_thread_run_queue_remove(volatile avr_thread *t)
+avr_thread_run_queue_remove(volatile avr_thread * t)
 {
     volatile avr_thread *r;
 
@@ -424,7 +415,7 @@ avr_thread_run_queue_remove(volatile avr_thread *t)
 }
 
 static void
-avr_thread_sleep_queue_remove(volatile avr_thread *t)
+avr_thread_sleep_queue_remove(volatile avr_thread * t)
 {
     volatile avr_thread *r,
                    *p;
@@ -462,7 +453,7 @@ avr_thread_exit(void)
  * Make it as cancelled and move on.
  */
 int8_t
-avr_thread_cancel(avr_thread *t)
+avr_thread_cancel(avr_thread * t)
 {
     uint8_t         ints;
 
@@ -504,6 +495,7 @@ avr_thread_cancel(avr_thread *t)
     avr_thread_sleep_queue_remove(t);
 
     t->state = ats_invalid;
+    free(t);
 
     SREG |= ints;
     return 0;
@@ -514,7 +506,7 @@ avr_thread_cancel(avr_thread *t)
 }
 
 void
-avr_thread_pause(avr_thread *t)
+avr_thread_pause(avr_thread * t)
 {
     uint8_t         ints;
 
@@ -535,7 +527,7 @@ avr_thread_pause(avr_thread *t)
 }
 
 void
-avr_thread_resume(avr_thread *t)
+avr_thread_resume(avr_thread * t)
 {
     uint8_t         ints;
 
@@ -583,6 +575,13 @@ avr_thread_yield(void)
         // Reset the tick
         avr_thread_active_thread->ticks =
             avr_thread_active_thread->quantum;
+    } else if (avr_thread_active_thread->state == ats_invalid) {
+        avr_thread_prev_thread = avr_thread_active_thread;
+        avr_thread_active_thread = t;
+        free(avr_thread_prev_thread);
+        avr_thread_active_thread->ticks =
+            avr_thread_active_thread->quantum;
+        avr_thread_switch_to_without_save(avr_thread_active_thread->sp);
     } else {
         avr_thread_prev_thread = avr_thread_active_thread;
         avr_thread_active_thread = t;
@@ -607,7 +606,7 @@ avr_thread_save_sp(uint8_t * sp)
 }
 
 void
-avr_thread_join(avr_thread *t)
+avr_thread_join(avr_thread * t)
 {
     uint8_t         ints;
     volatile avr_thread *r,

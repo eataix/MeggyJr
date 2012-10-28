@@ -6,6 +6,9 @@
 #define MAX_SCORE 4096
 #define ABS(a) (((a) < 0) ? -(a) : (a))
 
+/*
+ * Variables
+ */
 byte            xc,
                 yc;
 
@@ -27,7 +30,21 @@ int             tune_lose[] =
 
 byte            tone_current;
 
+avr_thread_mutex *mutex;
 
+volatile byte   button_a;
+volatile byte   button_up;
+volatile byte   button_down;
+volatile byte   button_left;
+volatile byte   button_right;
+
+avr_thread     *main_thread,
+               *key_thread,
+               *led_thread;
+
+/*
+ * Prototypes
+ */
 void            loop(void);
 
 void            draw_splash(void);
@@ -54,17 +71,8 @@ void            computer_move(void);
 
 int             calculate_score(byte col);
 
-struct avr_thread_mutex *mutex;
-
-volatile byte   button_a;
-volatile byte   button_up;
-volatile byte   button_down;
-volatile byte   button_left;
-volatile byte   button_right;
-
-struct avr_thread *main_thread,
-               *key_thread,
-               *led_thread;
+void            key_entry(void);
+void            led_entry(void);
 
 void
 key_entry(void)
@@ -103,9 +111,9 @@ led_entry(void)
 {
     while (1) {
         if (player_turn) {
-            meggyjr_set_led_binary(0b01010101);
+            meggyjr_set_led_binary(0 b01010101);
         } else {
-            meggyjr_set_led_binary(0b10101010);
+            meggyjr_set_led_binary(0 b10101010);
         }
         avr_thread_yield();
     }
@@ -528,7 +536,6 @@ player_move(void)
 void
 computer_move(void)
 {
-    byte            col;
     int             scores[8];
     int             max_score;
 
@@ -574,13 +581,10 @@ int
 calculate_score(byte col)
 {
     int             score,
-                    opp_scores[8],
-                    opp_max_score,
                     r,
                     c;
 
-    byte            row,
-                    opp_col;
+    byte            row;
 
     score = 0;
 
