@@ -120,11 +120,11 @@ typedef struct avr_thread_rwlock {
 } avr_thread_rwlock;
 
 avr_thread     *avr_thread_init(uint16_t main_stack_size,
-                                uint8_t main_priority);
+                                avr_thread_priority main_priority);
 
 avr_thread     *avr_thread_create(void (*entry) (void),
                                   uint8_t * stack,
-                                  uint16_t stack_size, uint8_t priority);
+                                  uint16_t stack_size, avr_thread_priority priority);
 #ifdef _EXPORT_INTERNAL
 extern volatile avr_thread *avr_thread_active_thread;
 

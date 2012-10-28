@@ -111,9 +111,9 @@ led_entry(void)
 {
     while (1) {
         if (player_turn) {
-            meggyjr_set_led_binary(0 b01010101);
+            meggyjr_set_led_binary(0b01010101);
         } else {
-            meggyjr_set_led_binary(0 b10101010);
+            meggyjr_set_led_binary(0b10101010);
         }
         avr_thread_yield();
     }

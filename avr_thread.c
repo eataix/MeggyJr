@@ -48,7 +48,7 @@ static void     avr_thread_init_thread(volatile
                                        void (*entry) (void),
                                        uint8_t * stack,
                                        uint16_t stack_size,
-                                       uint8_t priority);
+                                       avr_thread_priority priority);
 
 static void     avr_thread_self_deconstruct(void);
 
@@ -206,7 +206,8 @@ avr_thread_self_deconstruct(void)
 }
 
 avr_thread     *
-avr_thread_init(uint16_t main_stack_size, uint8_t main_priority)
+avr_thread_init(uint16_t main_stack_size,
+                avr_thread_priority main_priority)
 {
     uint8_t         ints;
 
@@ -242,7 +243,7 @@ avr_thread_init(uint16_t main_stack_size, uint8_t main_priority)
 
 avr_thread     *
 avr_thread_create(void (*entry) (void), uint8_t * stack,
-                  uint16_t stack_size, uint8_t priority)
+                  uint16_t stack_size, avr_thread_priority priority)
 {
     uint8_t         ints;
     avr_thread     *t;
@@ -276,9 +277,9 @@ avr_thread_create(void (*entry) (void), uint8_t * stack,
 }
 
 static void
-avr_thread_init_thread(volatile avr_thread * t,
-                       void (*entry) (void), uint8_t * stack,
-                       uint16_t stack_size, uint8_t priority)
+avr_thread_init_thread(volatile avr_thread * t, void (*entry) (void),
+                       uint8_t * stack, uint16_t stack_size,
+                       avr_thread_priority priority)
 {
     uint8_t         i;
 
