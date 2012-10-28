@@ -106,12 +106,12 @@ void            computer_move(void);
 
 int             calculate_score(byte col);
 
-void            key_entry(void);
+void            button_buffer_entry(void);
 
 void            led_entry(void);
 
 void
-key_entry(void)
+button_buffer_entry(void)
 {
     while (1) {
         avr_thread_mutex_lock(mutex);
@@ -174,7 +174,7 @@ main(void)
 
     mutex = avr_thread_mutex_init();
 
-    key_thread = avr_thread_create(key_entry, key_stack,
+    key_thread = avr_thread_create(button_buffer_entry, key_stack,
                                    sizeof key_stack, atp_normal);
 
     led_thread = avr_thread_create(led_entry, led_stack,
