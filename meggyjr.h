@@ -1,3 +1,22 @@
+/*-
+ *  Copyright (c) 2010 Windell H. Oskay
+ *  Copyright (c) 2012 Meitian Huang <_@freeaddr.info>
+ *  All rights reserved.
+ *
+ * This library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef _MEGGYJRLIB_H
 #define _MEGGYJRLIB_H
 
@@ -27,21 +46,56 @@ enum colors {
     CustomColor5, CustomColor6, CustomColor7, CustomColor8, CustomColor9
 };
 
+/*
+ * Initialised the whole library.
+ * This must be called before using other functions in the library.
+ */
+void            meggyjr_setup(void);
+
+/*
+ * Checks which buttons are down.
+ * Does not explicitly return anything. Instread, the corresponding
+ * meggyjr_button_* will be updated.
+ */
 void            meggyjr_check_button_down(void);
 
-
+/*
+ * Checks which buttons are pressed and released.
+ * Does not explicitly return anything. Instread, the corresponding
+ * meggyjr_button_* will be updated.
+ */
 void            meggyjr_check_button_pressed(void);
 
+/*
+ * Sets the leds on the top of MeggyJr.
+ * Please consider of using meggyjr_set_led_binary() instead and that 
+ * requires a less complicated argument.
+ */
 void            meggyjr_set_led(byte n);
 
 void            meggyjr_set_led_binary(byte n);
 
+/*
+ * Draws a pixel with coordinate x, y on the board with specified colour
+ */
 void            meggyjr_draw(byte x, byte y, byte colour);
 
+/*
+ * Reads the colour of a pixel.
+ */
 byte            meggyjr_read_pixel(byte x, byte y);
 
+/*
+ * Clears (dims) the whole slate.
+ */
 void            meggyjr_clear_slate(void);
 
+/*
+ * Flushes the buffer.
+ *
+ * When meggyjr_draw() is called, the update will not immediately take
+ * effect. This function should be used to flush the buffer.
+ */
 void            meggyjr_display_slate(void);
 
 #define ToneB2      64783
@@ -129,14 +183,20 @@ void            meggyjr_display_slate(void);
 #define ToneD9      851
 #define ToneDs9     803
 
+/*
+ * Enables the sound...
+ */
 void            meggyjr_sound_enable(void);
+
+/*
+ * Disable the sound...
+ */
 void            meggyjr_sound_disable(void);
 
-// #define MakingSound (TCCR1B > 0)
-
+/*
+ * Starts a certain tone.
+ */
 void            meggyjr_tone_start(unsigned int divisor,
                                    unsigned int duration_ms);
-
-void            meggyjr_setup(void);
 
 #endif

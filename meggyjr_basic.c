@@ -1,3 +1,22 @@
+/*-
+ *  Copyright (c) 2010 Windell H. Oskay
+ *  Copyright (c) 2012 Meitian Huang <_@freeaddr.info>
+ *  All rights reserved.
+ *
+ * This library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay_basic.h>
@@ -75,19 +94,19 @@ meggyjr_set_pixel_color(byte x, byte y, byte * rgb)
     frame[pixelPtr] = rgb[0];
 }
 
-byte
+inline          byte
 meggyjr_get_pixel_red(byte x, byte y)
 {
     return frame[24 * x + y + 16];
 }
 
-byte
+inline          byte
 meggyjr_get_pixel_green(byte x, byte y)
 {
     return frame[24 * x + y + 8];
 }
 
-byte
+inline          byte
 meggyjr_get_pixel_blue(byte x, byte y)
 {
     return frame[24 * x + y];
@@ -105,13 +124,13 @@ meggyjr_clear_pixel(byte x, byte y)
     frame[pixelPtr] = 0;
 }
 
-byte
+inline          byte
 meggyjr_get_button(void)
 {
     return (~(PINC) & 63U);
 }
 
-void
+inline void
 meggyjr_start_tone(unsigned int tone, unsigned int duration)
 {
     OCR1A = tone;

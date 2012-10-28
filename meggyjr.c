@@ -1,3 +1,22 @@
+/*-
+ *  Copyright (c) 2010 Windell H. Oskay
+ *  Copyright (c) 2012 Meitian Huang <_@freeaddr.info>
+ *  All rights reserved.
+ *
+ * This library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "meggyjr.h"
 #include "meggyjr_basic.h"
 
@@ -10,7 +29,6 @@ volatile byte   meggyjr_button_right;
 
 static volatile byte meggyjr_game_slate[DIMENSION][DIMENSION];
 static volatile byte last_button_state;
-
 
 // Color lookup Table
 static byte     meggyjr_colour_table[26][3] = {
@@ -102,13 +120,13 @@ meggyjr_check_button_pressed(void)
     last_button_state = i;
 }
 
-void
+inline void
 meggyjr_set_led(byte n)
 {
     leds = n;
 }
 
-void
+inline void
 meggyjr_set_led_binary(byte n)
 {
     n = (n & 240) >> 4 | (n & 15) << 4;
@@ -116,13 +134,13 @@ meggyjr_set_led_binary(byte n)
     leds = (n & 170) >> 1 | (n & 85) << 1;
 }
 
-void
+inline void
 meggyjr_draw(byte x, byte y, byte colour)
 {
     meggyjr_game_slate[x][y] = colour;
 }
 
-byte
+inline          byte
 meggyjr_read_pixel(byte x, byte y)
 {
     return meggyjr_game_slate[x][y];
@@ -162,13 +180,13 @@ meggyjr_tone_start(unsigned int divisor, unsigned int duration_ms)
     meggyjr_start_tone(divisor, duration_ms);
 }
 
-void
+inline void
 meggyjr_sound_enable(void)
 {
     meggyjr_set_sound_state(1);
 }
 
-void
+inline void
 meggyjr_sound_disable(void)
 {
     meggyjr_set_sound_state(0);
@@ -180,6 +198,5 @@ meggyjr_setup(void)
     meggyjr_init();
     meggyjr_clear_frame();
     last_button_state = meggyjr_get_button();
-    // StartTone(0, 0);
     meggyjr_sound_disable();
 }

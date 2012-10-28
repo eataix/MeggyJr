@@ -1,3 +1,30 @@
+/*-
+ * Copyright (c) 2002-2004  Brian S. Dean <bsd@bdmicro.com>
+ * Copyright (c) 2012       Meitian Huang <_@freeaddr.info>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -7,6 +34,7 @@
 #include "avr_thread.h"
 
 #define IDLE_THREAD_STACK_SIZE 60
+#define MAX_READER 10
 
 /**
  * Data structures
@@ -134,115 +162,10 @@ static int8_t   avr_thread_atomic_add(int8_t x, int8_t delta);
  * Implementations
  * ===============
  */
-void
-avr_thread_sleep(uint16_t ticks)
-{
-    volatile struct avr_thread *t,
-                   *p;
 
-    uint8_t         ints;
-
-    ints = SREG & 0x80;
-    cli();
-
-    /*
-     * Sleep queue is empty.
-     */
-    if (avr_thread_sleep_queue == NULL) {
-        avr_thread_sleep_queue = avr_thread_active_thread;
-        avr_thread_active_thread->sleep_queue_next = NULL;
-        avr_thread_active_thread->sleep_ticks = ticks;
-        goto _exit_from_sleep;
-    }
-
-    /*
-     * Sleep queue is not empty.
-     * Find a space
-     */
-    for (p = NULL, t = avr_thread_sleep_queue; t != NULL;) {
-        if (ticks < t->sleep_ticks) {
-            t->sleep_ticks -= ticks;
-            avr_thread_active_thread->sleep_queue_next = t;
-            avr_thread_active_thread->sleep_ticks = ticks;
-            if (p != NULL) {
-                p->sleep_queue_next = avr_thread_active_thread;
-            } else {
-                avr_thread_sleep_queue = avr_thread_active_thread;
-            }
-            goto _exit_from_sleep;
-        }
-        ticks -= t->sleep_ticks;
-        p = t;
-        t = t->sleep_queue_next;
-    }
-
-    /*
-     * Tail of the sleep queue.
-     */
-    p->sleep_queue_next = avr_thread_active_thread;
-    avr_thread_active_thread->sleep_queue_next = NULL;
-    avr_thread_active_thread->sleep_ticks = ticks;
-
-  _exit_from_sleep:
-    avr_thread_active_thread->state = ats_sleeping;
-    avr_thread_yield();
-    SREG |= ints;
-    return;
-}
-
-uint8_t        *
-avr_thread_tick(uint8_t * saved_sp)
-{
-    volatile struct avr_thread *t;
-
-    // TODO for idle
-    avr_thread_active_thread->sp = saved_sp;
-
-    /*
-     * Check if any sleeping thread can be waken.
-     */
-    if (avr_thread_sleep_queue != NULL) {
-        --(avr_thread_sleep_queue->sleep_ticks);
-        while (avr_thread_sleep_queue != NULL &&
-               avr_thread_sleep_queue->sleep_ticks == 0) {
-            avr_thread_sleep_queue->state = ats_runnable;
-            avr_thread_run_queue_push(avr_thread_sleep_queue);
-            t = avr_thread_sleep_queue;
-            avr_thread_sleep_queue =
-                avr_thread_sleep_queue->sleep_queue_next;
-            t->sleep_queue_next = NULL;
-        }
-    }
-
-    /*
-     * Peek at the run queue if there is a thread with higher priority,
-     * switch to it.
-     * Warning: starvation is highly possible.
-     */
-    if (avr_thread_run_queue->priority >
-        avr_thread_active_thread->priority) {
-        avr_thread_prev_thread = avr_thread_active_thread;
-        avr_thread_active_thread = avr_thread_run_queue_pop();
-        avr_thread_run_queue_push(avr_thread_prev_thread);
-        avr_thread_prev_thread->ticks = avr_thread_prev_thread->quantum;
-        avr_thread_active_thread->ticks =
-            avr_thread_active_thread->quantum;
-    } else {
-        --(avr_thread_active_thread->ticks);
-        if (avr_thread_active_thread->ticks <= 0) {
-            avr_thread_prev_thread = avr_thread_active_thread;
-            avr_thread_active_thread = avr_thread_run_queue_pop();
-            avr_thread_run_queue_push(avr_thread_prev_thread);
-            avr_thread_prev_thread->ticks =
-                avr_thread_prev_thread->quantum;
-            avr_thread_active_thread->ticks =
-                avr_thread_active_thread->quantum;
-        }
-    }
-
-    return avr_thread_active_thread->sp;
-}
-
+/*
+ * Does nothing except yielding.
+ */
 static void
 avr_thread_idle_thread_entry(void)
 {
@@ -253,6 +176,8 @@ avr_thread_idle_thread_entry(void)
 
 /*
  * Deconstructs the active thread.
+ * This function will be called if a thread `return' in its entry function
+ * or a thread calls avr_thread_exit().
  */
 static void
 avr_thread_self_deconstruct(void)
@@ -383,6 +308,9 @@ avr_thread_init_thread(volatile struct avr_thread *t, void (*entry) (void),
     *t->sp = (uint8_t) (((uint16_t) avr_thread_self_deconstruct) >> 8);
     --(t->sp);
 
+    /*
+     * This part is mainly from http://www.bdmicro.com/code/threads/.
+     */
     *t->sp = (uint8_t) (uint16_t) entry;
     --(t->sp);
     *t->sp = (uint8_t) (((uint16_t) entry) >> 8);
@@ -409,113 +337,115 @@ avr_thread_init_thread(volatile struct avr_thread *t, void (*entry) (void),
     return;
 }
 
-void
-avr_thread_run_queue_push(volatile struct avr_thread *t)
+uint8_t        *
+avr_thread_tick(uint8_t * saved_sp)
 {
-    volatile struct avr_thread *r;
+    volatile struct avr_thread *t;
 
-    for (r = avr_thread_run_queue; r != NULL; r = r->run_queue_next) {
-        if (t->priority > r->priority) {
-            if (r->run_queue_prev != NULL) {
-                t->run_queue_prev = r->run_queue_prev;
-                r->run_queue_prev->run_queue_next = t;
-                r->run_queue_prev = t;
-                t->run_queue_next = r;
-            } else {
-                avr_thread_run_queue = t;
-                t->run_queue_next = r;
-                t->run_queue_prev = NULL;
-                t->run_queue_next->run_queue_prev = t;
-            }
-            return;
+    // TODO for idle
+    avr_thread_active_thread->sp = saved_sp;
+
+    /*
+     * Check if any sleeping thread can be waken.
+     */
+    if (avr_thread_sleep_queue != NULL) {
+        --(avr_thread_sleep_queue->sleep_ticks);
+        while (avr_thread_sleep_queue != NULL &&
+               avr_thread_sleep_queue->sleep_ticks == 0) {
+            avr_thread_sleep_queue->state = ats_runnable;
+            avr_thread_run_queue_push(avr_thread_sleep_queue);
+            t = avr_thread_sleep_queue;
+            avr_thread_sleep_queue =
+                avr_thread_sleep_queue->sleep_queue_next;
+            t->sleep_queue_next = NULL;
         }
-
-        if (r->run_queue_next == NULL) {
-            r->run_queue_next = t;
-            t->run_queue_next = NULL;
-            t->run_queue_prev = r;
-            return;
-        }
-    }
-
-    avr_thread_run_queue = t;
-    t->run_queue_prev = NULL;
-    t->run_queue_next = NULL;
-}
-
-static volatile struct avr_thread *
-avr_thread_run_queue_pop(void)
-{
-    volatile struct avr_thread *r;
-
-    if (avr_thread_run_queue != NULL) {
-        r = avr_thread_run_queue;
-        avr_thread_run_queue = r->run_queue_next;
-        if (avr_thread_run_queue != NULL) {
-            avr_thread_run_queue->run_queue_prev = NULL;
-        }
-        r->run_queue_next = NULL;
-        r->run_queue_prev = NULL;
-        return r;
     }
 
     /*
-     * Run the idle thread if the run queue is empty.
+     * Peek at the run queue if there is a thread with higher priority,
+     * switch to it.
+     * Warning: starvation is highly possible.
      */
-    return avr_thread_idle_thread;
-}
-
-static void
-avr_thread_run_queue_remove(volatile struct avr_thread *t)
-{
-    volatile struct avr_thread *r;
-
-    if (t == NULL) {
-        return;
-    }
-
-    for (r = avr_thread_run_queue; r != NULL; r = r->run_queue_next) {
-        if (r == t) {
-            if (r->run_queue_prev != NULL) {
-                r->run_queue_prev->run_queue_next = r->run_queue_next;
-            }
-
-            if (r->run_queue_next) {
-                r->run_queue_next->run_queue_prev = r->run_queue_prev;
-            }
-            if (r == avr_thread_run_queue) {
-                avr_thread_run_queue = r->run_queue_next;
-            }
-            r->run_queue_next = NULL;
-            r->run_queue_next = NULL;
-            return;
+    if (avr_thread_run_queue->priority >
+        avr_thread_active_thread->priority) {
+        avr_thread_prev_thread = avr_thread_active_thread;
+        avr_thread_active_thread = avr_thread_run_queue_pop();
+        avr_thread_run_queue_push(avr_thread_prev_thread);
+        avr_thread_prev_thread->ticks = avr_thread_prev_thread->quantum;
+        avr_thread_active_thread->ticks =
+            avr_thread_active_thread->quantum;
+    } else {
+        --(avr_thread_active_thread->ticks);
+        if (avr_thread_active_thread->ticks <= 0) {
+            avr_thread_prev_thread = avr_thread_active_thread;
+            avr_thread_active_thread = avr_thread_run_queue_pop();
+            avr_thread_run_queue_push(avr_thread_prev_thread);
+            avr_thread_prev_thread->ticks =
+                avr_thread_prev_thread->quantum;
+            avr_thread_active_thread->ticks =
+                avr_thread_active_thread->quantum;
         }
     }
-    // Not found. Implicit return
+
+    return avr_thread_active_thread->sp;
 }
 
-static void
-avr_thread_sleep_queue_remove(volatile struct avr_thread *t)
+void
+avr_thread_sleep(uint16_t ticks)
 {
-    volatile struct avr_thread *r,
+    volatile struct avr_thread *t,
                    *p;
 
-    for (p = NULL, r = avr_thread_sleep_queue; r != NULL;
-         p = r, r = r->sleep_queue_next) {
-        if (r == t) {
-            if (t->sleep_queue_next != NULL) {
-                t->sleep_queue_next->sleep_ticks += t->sleep_ticks;
-            }
-            if (avr_thread_sleep_queue == t) {
-                avr_thread_sleep_queue = t->sleep_queue_next;
-            }
-            if (p != NULL) {
-                p->sleep_queue_next = r->sleep_queue_next;
-            }
-            break;
-        }
+    uint8_t         ints;
+
+    ints = SREG & 0x80;
+    cli();
+
+    /*
+     * Sleep queue is empty.
+     */
+    if (avr_thread_sleep_queue == NULL) {
+        avr_thread_sleep_queue = avr_thread_active_thread;
+        avr_thread_active_thread->sleep_queue_next = NULL;
+        avr_thread_active_thread->sleep_ticks = ticks;
+        goto _exit_from_sleep;
     }
+
+    /*
+     * Sleep queue is not empty.
+     * Find a space
+     */
+    for (p = NULL, t = avr_thread_sleep_queue; t != NULL;) {
+        if (ticks < t->sleep_ticks) {
+            t->sleep_ticks -= ticks;
+            avr_thread_active_thread->sleep_queue_next = t;
+            avr_thread_active_thread->sleep_ticks = ticks;
+            if (p != NULL) {
+                p->sleep_queue_next = avr_thread_active_thread;
+            } else {
+                avr_thread_sleep_queue = avr_thread_active_thread;
+            }
+            goto _exit_from_sleep;
+        }
+        ticks -= t->sleep_ticks;
+        p = t;
+        t = t->sleep_queue_next;
+    }
+
+    /*
+     * Tail of the sleep queue.
+     */
+    p->sleep_queue_next = avr_thread_active_thread;
+    avr_thread_active_thread->sleep_queue_next = NULL;
+    avr_thread_active_thread->sleep_ticks = ticks;
+
+  _exit_from_sleep:
+    avr_thread_active_thread->state = ats_sleeping;
+    avr_thread_yield();
+    SREG |= ints;
+    return;
 }
+
 
 void
 avr_thread_exit(void)
@@ -676,16 +606,6 @@ avr_thread_yield(void)
 }
 
 void
-avr_thread_save_sp(uint8_t * sp)
-{
-    /*
-     * Do you see why?
-     */
-    sp += 2;
-    avr_thread_prev_thread->sp = sp;
-}
-
-void
 avr_thread_join(struct avr_thread *t)
 {
     uint8_t         ints;
@@ -724,6 +644,128 @@ avr_thread_join(struct avr_thread *t)
     return;
 }
 
+static void
+avr_thread_run_queue_push(volatile struct avr_thread *t)
+{
+    volatile struct avr_thread *r;
+
+    for (r = avr_thread_run_queue; r != NULL; r = r->run_queue_next) {
+        if (t->priority > r->priority) {
+            if (r->run_queue_prev != NULL) {
+                t->run_queue_prev = r->run_queue_prev;
+                r->run_queue_prev->run_queue_next = t;
+                r->run_queue_prev = t;
+                t->run_queue_next = r;
+            } else {
+                avr_thread_run_queue = t;
+                t->run_queue_next = r;
+                t->run_queue_prev = NULL;
+                t->run_queue_next->run_queue_prev = t;
+            }
+            return;
+        }
+
+        if (r->run_queue_next == NULL) {
+            r->run_queue_next = t;
+            t->run_queue_next = NULL;
+            t->run_queue_prev = r;
+            return;
+        }
+    }
+
+    avr_thread_run_queue = t;
+    t->run_queue_prev = NULL;
+    t->run_queue_next = NULL;
+}
+
+static volatile struct avr_thread *
+avr_thread_run_queue_pop(void)
+{
+    volatile struct avr_thread *r;
+
+    if (avr_thread_run_queue != NULL) {
+        r = avr_thread_run_queue;
+        avr_thread_run_queue = r->run_queue_next;
+        if (avr_thread_run_queue != NULL) {
+            avr_thread_run_queue->run_queue_prev = NULL;
+        }
+        r->run_queue_next = NULL;
+        r->run_queue_prev = NULL;
+        return r;
+    }
+
+    /*
+     * Run the idle thread if the run queue is empty.
+     */
+    return avr_thread_idle_thread;
+}
+
+static void
+avr_thread_run_queue_remove(volatile struct avr_thread *t)
+{
+    volatile struct avr_thread *r;
+
+    if (t == NULL) {
+        return;
+    }
+
+    for (r = avr_thread_run_queue; r != NULL; r = r->run_queue_next) {
+        if (r == t) {
+            if (r->run_queue_prev != NULL) {
+                r->run_queue_prev->run_queue_next = r->run_queue_next;
+            }
+
+            if (r->run_queue_next) {
+                r->run_queue_next->run_queue_prev = r->run_queue_prev;
+            }
+            if (r == avr_thread_run_queue) {
+                avr_thread_run_queue = r->run_queue_next;
+            }
+            r->run_queue_next = NULL;
+            r->run_queue_next = NULL;
+            return;
+        }
+    }
+    // Not found. Implicit return
+}
+
+static void
+avr_thread_sleep_queue_remove(volatile struct avr_thread *t)
+{
+    volatile struct avr_thread *r,
+                   *p;
+
+    for (p = NULL, r = avr_thread_sleep_queue; r != NULL;
+         p = r, r = r->sleep_queue_next) {
+        if (r == t) {
+            if (t->sleep_queue_next != NULL) {
+                t->sleep_queue_next->sleep_ticks += t->sleep_ticks;
+            }
+            if (avr_thread_sleep_queue == t) {
+                avr_thread_sleep_queue = t->sleep_queue_next;
+            }
+            if (p != NULL) {
+                p->sleep_queue_next = r->sleep_queue_next;
+            }
+            break;
+        }
+    }
+}
+
+void
+avr_thread_save_sp(uint8_t * sp)
+{
+    /*
+     * Do you see why?
+     */
+    sp += 2;
+    avr_thread_prev_thread->sp = sp;
+}
+
+/**
+ * Mutex
+ * =====
+ */
 
 struct avr_thread_mutex *
 avr_thread_mutex_init(void)
@@ -846,9 +888,11 @@ avr_thread_mutex_unlock(volatile struct avr_thread_mutex *mutex)
     return;
 }
 
-/*
- * struct avr_thread_semaphore
+/**
+ * Semaphore
+ * =========
  */
+
 struct avr_thread_semaphore *
 avr_thread_semaphore_init(int value)
 {
@@ -980,6 +1024,16 @@ avr_thread_sem_down(volatile struct avr_thread_semaphore *sem)
     }
 }
 
+/**
+ * Readers-writer lock
+ * ===================
+ */
+
+/*
+ * The following implementation was adapted from Google's Go programming
+ * language.
+ */
+
 /*
  * Simulates the atomic addition operation on other architecture.
  */
@@ -993,12 +1047,6 @@ avr_thread_atomic_add(int8_t x, int8_t delta)
     SREG = i;
     return x;
 }
-
-/*
- * The following implementation was adapted from Google's Go programming
- * language.
- */
-#define MAX_READER 10
 
 struct avr_thread_rwlock *
 avr_thread_rwlock_init(void)
