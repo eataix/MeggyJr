@@ -349,7 +349,6 @@ avr_thread_tick(uint8_t * saved_sp)
 {
     volatile struct avr_thread *t;
 
-    // TODO for idle
     avr_thread_active_thread->sp = saved_sp;
 
     /*
@@ -956,12 +955,6 @@ void
 avr_thread_sem_up(volatile struct avr_thread_semaphore *sem)
 {
     if (sem == NULL || sem->mutex == NULL) {
-        /*
-         * TODO
-         * Return error messages.
-         * I am thinking of killing the calling thread.
-         * It is a pity that I cannot do that.
-         */
         return;
     }
     avr_thread_mutex_lock(sem->mutex);

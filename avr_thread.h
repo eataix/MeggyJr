@@ -128,8 +128,7 @@ struct avr_thread_rwlock;
  * Initialises the library.
  * Must be called before using any other function.
  */
-struct avr_thread *avr_thread_init(uint16_t main_stack_size,
-                                   enum avr_thread_priority
+struct avr_thread *avr_thread_init(uint16_t main_stack_size, enum avr_thread_priority
                                    main_priority);
 
 /*

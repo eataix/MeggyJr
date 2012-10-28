@@ -67,7 +67,6 @@ meggyjr_init(void)
     OCR2A = (F_CPU >> 3) / 8 / 15 / FPS;
     TIMSK2 = (1 << OCIE2A);
 
-    // TODO
     // sei();
 }
 
@@ -430,19 +429,4 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
     __asm__("out __SREG__,r0");
     __asm__("pop r0");
     __asm__("reti");
-}
-
-// TODO
-void
-meggyjr_delay(uint16_t ms)
-{
-    uint16_t        i,
-                    j;
-
-    uint16_t        loop = F_CPU / 17000;
-    for (i = 0; i < ms; i++) {
-        for (j = 0; j < loop; j++) {
-            // Do nothing but burning CPU cycles.
-        }
-    }
 }
