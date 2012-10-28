@@ -10,7 +10,7 @@ static int8_t   avr_thread_atomic_add(int8_t x, int8_t delta);
 
 
 struct avr_thread_mutex *
-avr_thread_mutex_create(void)
+avr_thread_mutex_init(void)
 {
     struct avr_thread_mutex *mutex;
 
@@ -42,11 +42,11 @@ avr_thread_mutex_destory(volatile struct avr_thread_mutex
 }
 
 void
-avr_thread_mutex_acquire(volatile struct avr_thread_mutex
-                         *mutex)
+avr_thread_mutex_lock(volatile struct avr_thread_mutex
+                      *mutex)
 {
     uint8_t         sreg;
-    volatile struct avr_thread_context *t,
+    volatile struct avr_thread *t,
                    *p;
 
     if (mutex == NULL) {
@@ -60,7 +60,7 @@ avr_thread_mutex_acquire(volatile struct avr_thread_mutex
         if (mutex->locked == 0) {
             mutex->locked = 1;
 #ifdef SANITY
-            avr_thread_active_context->owning = mutex;
+            avr_thread_active_thread->owning = mutex;
 #endif
             SREG = sreg;
             return;
@@ -81,14 +81,14 @@ avr_thread_mutex_acquire(volatile struct avr_thread_mutex
                 t = t->wait_queue_next;
             }
             if (p == NULL) {
-                mutex->wait_queue = avr_thread_active_context;
+                mutex->wait_queue = avr_thread_active_thread;
                 mutex->wait_queue->wait_queue_next = NULL;
             } else {
-                avr_thread_active_context->wait_queue_next =
+                avr_thread_active_thread->wait_queue_next =
                     p->wait_queue_next;
-                p->wait_queue_next = avr_thread_active_context;
+                p->wait_queue_next = avr_thread_active_thread;
             }
-            avr_thread_active_context->state = ats_waiting;
+            avr_thread_active_thread->state = ats_waiting;
 
             SREG = sreg;
             avr_thread_yield();
@@ -97,8 +97,8 @@ avr_thread_mutex_acquire(volatile struct avr_thread_mutex
 }
 
 void
-avr_thread_mutex_release(volatile struct avr_thread_mutex
-                         *mutex)
+avr_thread_mutex_unlock(volatile struct avr_thread_mutex
+                        *mutex)
 {
     uint8_t         sreg = SREG;
     cli();
@@ -116,7 +116,7 @@ avr_thread_mutex_release(volatile struct avr_thread_mutex
          * I assume the thread releases the mutex is the one owning the
          * mutex
          */
-        avr_thread_active_context->owning = NULL;
+        avr_thread_active_thread->owning = NULL;
 #endif
 
         while (mutex->wait_queue != NULL) {
@@ -137,7 +137,7 @@ avr_thread_mutex_release(volatile struct avr_thread_mutex
  * avr_thread_semaphore
  */
 struct avr_thread_semaphore *
-avr_thread_semaphore_create(int value)
+avr_thread_semaphore_init(int value)
 {
     struct avr_thread_semaphore *sem;
 
@@ -150,7 +150,7 @@ avr_thread_semaphore_create(int value)
         return NULL;
     }
     sem->lock_count = value;
-    sem->mutex = avr_thread_mutex_create();
+    sem->mutex = avr_thread_mutex_init();
     if (sem->mutex == NULL) {
         return NULL;
     }
@@ -196,7 +196,7 @@ avr_thread_sem_up(volatile struct avr_thread_semaphore *sem)
          */
         return;
     }
-    avr_thread_mutex_acquire(sem->mutex);
+    avr_thread_mutex_lock(sem->mutex);
     ++(sem->lock_count);
     /*
      * Since we have only up() once, we only need to wake up one
@@ -208,13 +208,13 @@ avr_thread_sem_up(volatile struct avr_thread_semaphore *sem)
         sem->wait_queue = sem->wait_queue->wait_queue_next;
     }
 
-    avr_thread_mutex_release(sem->mutex);
+    avr_thread_mutex_unlock(sem->mutex);
 }
 
 void
 avr_thread_sem_down(volatile struct avr_thread_semaphore *sem)
 {
-    volatile struct avr_thread_context *t,
+    volatile struct avr_thread *t,
                    *p;
     if (sem == NULL || sem->mutex == NULL) {
         /*
@@ -240,7 +240,7 @@ avr_thread_sem_down(volatile struct avr_thread_semaphore *sem)
      * are holding the mutex -> release the mutex -> return
      */
     while (1) {
-        avr_thread_mutex_acquire(sem->mutex);
+        avr_thread_mutex_lock(sem->mutex);
         if (sem->lock_count == 0) {
             t = sem->wait_queue;
             p = NULL;
@@ -249,19 +249,19 @@ avr_thread_sem_down(volatile struct avr_thread_semaphore *sem)
                 t = t->wait_queue_next;
             }
             if (p == NULL) {
-                sem->wait_queue = avr_thread_active_context;
-                avr_thread_active_context->wait_queue_next = NULL;
+                sem->wait_queue = avr_thread_active_thread;
+                avr_thread_active_thread->wait_queue_next = NULL;
             } else {
-                avr_thread_active_context->wait_queue_next =
+                avr_thread_active_thread->wait_queue_next =
                     p->wait_queue_next;
-                p->wait_queue_next = avr_thread_active_context;
+                p->wait_queue_next = avr_thread_active_thread;
             }
-            avr_thread_mutex_release(sem->mutex);
-            avr_thread_active_context->state = ats_waiting;
+            avr_thread_mutex_unlock(sem->mutex);
+            avr_thread_active_thread->state = ats_waiting;
             avr_thread_yield();
         } else {
             --(sem->lock_count);
-            avr_thread_mutex_release(sem->mutex);
+            avr_thread_mutex_unlock(sem->mutex);
             return;
         }
     }
@@ -285,87 +285,88 @@ avr_thread_atomic_add(int8_t x, int8_t delta)
  * The following implementation was adapted from Google's Go programming
  * language.
  */
-#define rwmutexMaxReaders 10
+#define MAX_READER 10
 
-struct avr_thread_mutex_rw_lock *
-avr_thread_mutex_rw_create(void)
+struct avr_thread_rwlock *
+avr_thread_rwlock_init(void)
 {
-    struct avr_thread_mutex_rw_lock *r;
-    r = malloc(sizeof(struct avr_thread_mutex_rw_lock));
+    struct avr_thread_rwlock *r;
+    r = malloc(sizeof(struct avr_thread_rwlock));
     if (r == NULL) {
         return NULL;
     }
-    r->mutex = avr_thread_mutex_create();
-    r->writeSem = avr_thread_semaphore_create(0);
-    r->readerSem = avr_thread_semaphore_create(0);
-    r->readerCount = 0;
-    r->readerWait = 0;
+    r->mutex = avr_thread_mutex_init();
+    r->writer_sem = avr_thread_semaphore_init(0);
+    r->reader_sem = avr_thread_semaphore_init(0);
+    r->num_reader = 0;
+    r->num_waiting_reader = 0;
     return r;
 }
 
 void
-avr_thread_mutex_rw_destroy(volatile struct avr_thread_mutex_rw_lock
-                            *rwlock)
+avr_thread_rwlock_destroy(volatile struct avr_thread_rwlock
+                          *rwlock)
 {
     if (rwlock == NULL) {
         return;
     }
     avr_thread_mutex_destory(rwlock->mutex);
-    avr_thread_semaphore_destroy(rwlock->writeSem);
-    avr_thread_semaphore_destroy(rwlock->readerSem);
+    avr_thread_semaphore_destroy(rwlock->writer_sem);
+    avr_thread_semaphore_destroy(rwlock->reader_sem);
     free(rwlock);
 }
 
 void
-avr_thread_mutex_rw_rlock(volatile struct avr_thread_mutex_rw_lock *rwlock)
+avr_thread_rwlock_rdlock(volatile struct avr_thread_rwlock *rwlock)
 {
     if (rwlock == NULL) {
         return;
     }
-    if (avr_thread_atomic_add(rwlock->readerCount, 1) < 0) {
-        avr_thread_sem_down(rwlock->readerSem);
+    if (avr_thread_atomic_add(rwlock->num_reader, 1) < 0) {
+        avr_thread_sem_down(rwlock->reader_sem);
     }
 }
 
 void
-avr_thread_mutex_rw_runlock(volatile struct avr_thread_mutex_rw_lock
-                            *rwlock)
+avr_thread_rwlock_rdunlock(volatile struct avr_thread_rwlock
+                           *rwlock)
 {
     if (rwlock == NULL) {
         return;
     }
-    if (avr_thread_atomic_add(rwlock->readerCount, -1) < 0) {
-        if (avr_thread_atomic_add(rwlock->readerWait, -1) == 0) {
-            avr_thread_sem_up(rwlock->writeSem);
+    if (avr_thread_atomic_add(rwlock->num_reader, -1) < 0) {
+        if (avr_thread_atomic_add(rwlock->num_waiting_reader, -1) == 0) {
+            avr_thread_sem_up(rwlock->writer_sem);
         }
     }
 }
 
 void
-avr_thread_mutex_rw_wlock(volatile struct avr_thread_mutex_rw_lock *rwlock)
+avr_thread_rwlock_wrlock(volatile struct avr_thread_rwlock *rwlock)
 {
     int8_t          r;
 
-    avr_thread_mutex_acquire(rwlock->mutex);
+    avr_thread_mutex_lock(rwlock->mutex);
 
-    r = avr_thread_atomic_add(rwlock->readerCount, -rwmutexMaxReaders) +
-        rwmutexMaxReaders;
-    if (r != 0 && avr_thread_atomic_add(rwlock->readerWait, r) != 0) {
-        avr_thread_sem_down(rwlock->writeSem);
+    r = avr_thread_atomic_add(rwlock->num_reader, -MAX_READER) +
+        MAX_READER;
+    if (r != 0
+        && avr_thread_atomic_add(rwlock->num_waiting_reader, r) != 0) {
+        avr_thread_sem_down(rwlock->writer_sem);
     }
 }
 
 void
-avr_thread_mutex_rw_wunlock(volatile struct avr_thread_mutex_rw_lock
-                            *rwlock)
+avr_thread_rwlock_wrunlock(volatile struct avr_thread_rwlock
+                           *rwlock)
 {
     int8_t          r,
                     i;
 
-    r = avr_thread_atomic_add(rwlock->readerCount, rwmutexMaxReaders);
+    r = avr_thread_atomic_add(rwlock->num_reader, MAX_READER);
     for (i = 0; i < r; ++i) {
-        avr_thread_sem_down(rwlock->readerSem);
+        avr_thread_sem_down(rwlock->reader_sem);
     }
 
-    avr_thread_mutex_release(rwlock->mutex);
+    avr_thread_mutex_unlock(rwlock->mutex);
 }

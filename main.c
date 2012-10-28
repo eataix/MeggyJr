@@ -62,7 +62,7 @@ volatile byte   button_down;
 volatile byte   button_left;
 volatile byte   button_right;
 
-struct avr_thread_context *main_thread,
+struct avr_thread *main_thread,
                *key_thread,
                *led_thread;
 
@@ -70,7 +70,7 @@ void
 key_entry(void)
 {
     while (1) {
-        avr_thread_mutex_acquire(mutex);
+        avr_thread_mutex_lock(mutex);
         meggyjr_check_button_pressed();
         if (meggyjr_button_a) {
             avr_thread_resume(led_thread);
@@ -93,7 +93,7 @@ key_entry(void)
         if (meggyjr_button_right) {
             button_right = 1;
         }
-        avr_thread_mutex_release(mutex);
+        avr_thread_mutex_unlock(mutex);
         avr_thread_yield();
     }
 }
@@ -103,9 +103,9 @@ led_entry(void)
 {
     while (1) {
         if (player_turn) {
-            meggyjr_set_led_binary(0 b01010101);
+            meggyjr_set_led_binary(0b01010101);
         } else {
-            meggyjr_set_led_binary(0 b10101010);
+            meggyjr_set_led_binary(0b10101010);
         }
         avr_thread_yield();
     }
@@ -128,7 +128,7 @@ main(void)
     button_left = 0;
     button_right = 0;
 
-    mutex = avr_thread_mutex_create();
+    mutex = avr_thread_mutex_init();
 
     key_thread = avr_thread_create(key_entry, key_stack,
                                    sizeof key_stack, atp_noromal);
@@ -154,7 +154,7 @@ main(void)
 void
 loop(void)
 {
-    avr_thread_mutex_acquire(mutex);
+    avr_thread_mutex_lock(mutex);
 
     if (button_a) {
         xc = 6;
@@ -176,8 +176,7 @@ loop(void)
         button_up = 0;
     }
 
-    avr_thread_mutex_release(mutex);
-
+    avr_thread_mutex_unlock(mutex);
     if (game_over) {
         meggyjr_draw(xc, yc, Dark);
         flash_three();
@@ -487,7 +486,7 @@ flash_three(void)
 void
 player_move(void)
 {
-    avr_thread_mutex_acquire(mutex);
+    avr_thread_mutex_lock(mutex);
 
     if (button_down) {
         heavy();
@@ -519,7 +518,7 @@ player_move(void)
         button_left = 0;
     }
 
-    avr_thread_mutex_release(mutex);
+    avr_thread_mutex_unlock(mutex);
 
     meggyjr_draw(xc, yc, player_colors[player_turn]);
     meggyjr_display_slate();
