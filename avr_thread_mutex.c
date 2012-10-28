@@ -9,12 +9,12 @@
 static int8_t   avr_thread_atomic_add(int8_t x, int8_t delta);
 
 
-struct avr_thread_mutex *
+avr_thread_mutex *
 avr_thread_mutex_init(void)
 {
-    struct avr_thread_mutex *mutex;
+    avr_thread_mutex *mutex;
 
-    mutex = malloc(sizeof(struct avr_thread_mutex));
+    mutex = malloc(sizeof(avr_thread_mutex));
     if (mutex == NULL) {
         return NULL;
     }
@@ -25,7 +25,7 @@ avr_thread_mutex_init(void)
 }
 
 void
-avr_thread_mutex_destory(volatile struct avr_thread_mutex
+avr_thread_mutex_destory(volatile avr_thread_mutex
                          *mutex)
 {
     uint8_t         sreg;
@@ -42,11 +42,11 @@ avr_thread_mutex_destory(volatile struct avr_thread_mutex
 }
 
 void
-avr_thread_mutex_lock(volatile struct avr_thread_mutex
+avr_thread_mutex_lock(volatile avr_thread_mutex
                       *mutex)
 {
     uint8_t         sreg;
-    volatile struct avr_thread *t,
+    volatile avr_thread *t,
                    *p;
 
     if (mutex == NULL) {
@@ -97,7 +97,7 @@ avr_thread_mutex_lock(volatile struct avr_thread_mutex
 }
 
 void
-avr_thread_mutex_unlock(volatile struct avr_thread_mutex
+avr_thread_mutex_unlock(volatile avr_thread_mutex
                         *mutex)
 {
     uint8_t         sreg = SREG;
@@ -136,16 +136,16 @@ avr_thread_mutex_unlock(volatile struct avr_thread_mutex
 /*
  * avr_thread_semaphore
  */
-struct avr_thread_semaphore *
+avr_thread_semaphore *
 avr_thread_semaphore_init(int value)
 {
-    struct avr_thread_semaphore *sem;
+    avr_thread_semaphore *sem;
 
     if (value < 0) {
         return NULL;
     }
 
-    sem = malloc(sizeof(struct avr_thread_semaphore));
+    sem = malloc(sizeof(avr_thread_semaphore));
     if (sem == NULL) {
         return NULL;
     }
@@ -167,7 +167,7 @@ avr_thread_semaphore_init(int value)
  * semaphore.
  */
 void
-avr_thread_semaphore_destroy(volatile struct avr_thread_semaphore *sem)
+avr_thread_semaphore_destroy(volatile avr_thread_semaphore *sem)
 {
     uint8_t         sreg;
     sreg = SREG;
@@ -185,7 +185,7 @@ avr_thread_semaphore_destroy(volatile struct avr_thread_semaphore *sem)
 }
 
 void
-avr_thread_sem_up(volatile struct avr_thread_semaphore *sem)
+avr_thread_sem_up(volatile avr_thread_semaphore *sem)
 {
     if (sem == NULL || sem->mutex == NULL) {
         /*
@@ -212,9 +212,9 @@ avr_thread_sem_up(volatile struct avr_thread_semaphore *sem)
 }
 
 void
-avr_thread_sem_down(volatile struct avr_thread_semaphore *sem)
+avr_thread_sem_down(volatile avr_thread_semaphore *sem)
 {
-    volatile struct avr_thread *t,
+    volatile avr_thread *t,
                    *p;
     if (sem == NULL || sem->mutex == NULL) {
         /*
@@ -287,11 +287,11 @@ avr_thread_atomic_add(int8_t x, int8_t delta)
  */
 #define MAX_READER 10
 
-struct avr_thread_rwlock *
+avr_thread_rwlock *
 avr_thread_rwlock_init(void)
 {
-    struct avr_thread_rwlock *r;
-    r = malloc(sizeof(struct avr_thread_rwlock));
+    avr_thread_rwlock *r;
+    r = malloc(sizeof(avr_thread_rwlock));
     if (r == NULL) {
         return NULL;
     }
@@ -304,7 +304,7 @@ avr_thread_rwlock_init(void)
 }
 
 void
-avr_thread_rwlock_destroy(volatile struct avr_thread_rwlock
+avr_thread_rwlock_destroy(volatile avr_thread_rwlock
                           *rwlock)
 {
     if (rwlock == NULL) {
@@ -317,7 +317,7 @@ avr_thread_rwlock_destroy(volatile struct avr_thread_rwlock
 }
 
 void
-avr_thread_rwlock_rdlock(volatile struct avr_thread_rwlock *rwlock)
+avr_thread_rwlock_rdlock(volatile avr_thread_rwlock *rwlock)
 {
     if (rwlock == NULL) {
         return;
@@ -328,7 +328,7 @@ avr_thread_rwlock_rdlock(volatile struct avr_thread_rwlock *rwlock)
 }
 
 void
-avr_thread_rwlock_rdunlock(volatile struct avr_thread_rwlock
+avr_thread_rwlock_rdunlock(volatile avr_thread_rwlock
                            *rwlock)
 {
     if (rwlock == NULL) {
@@ -342,7 +342,7 @@ avr_thread_rwlock_rdunlock(volatile struct avr_thread_rwlock
 }
 
 void
-avr_thread_rwlock_wrlock(volatile struct avr_thread_rwlock *rwlock)
+avr_thread_rwlock_wrlock(volatile avr_thread_rwlock *rwlock)
 {
     int8_t          r;
 
@@ -357,7 +357,7 @@ avr_thread_rwlock_wrlock(volatile struct avr_thread_rwlock *rwlock)
 }
 
 void
-avr_thread_rwlock_wrunlock(volatile struct avr_thread_rwlock
+avr_thread_rwlock_wrunlock(volatile avr_thread_rwlock
                            *rwlock)
 {
     int8_t          r,
