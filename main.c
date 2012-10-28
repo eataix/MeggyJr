@@ -30,7 +30,7 @@ int             tune_lose[] =
 
 byte            tone_current;
 
-avr_thread_mutex *mutex;
+struct avr_thread_mutex *mutex;
 
 volatile byte   button_a;
 volatile byte   button_up;
@@ -38,7 +38,8 @@ volatile byte   button_down;
 volatile byte   button_left;
 volatile byte   button_right;
 
-avr_thread     *main_thread,
+struct avr_thread
+               *main_thread,
                *key_thread,
                *led_thread;
 
