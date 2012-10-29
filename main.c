@@ -173,7 +173,7 @@ led_entry(void)
         } else {
             meggyjr_set_led_binary(0b10101010);
         }
-        avr_thread_sleep(3);
+        avr_thread_sleep(4);
     }
 }
 
@@ -375,7 +375,7 @@ clear_board(void)
     avr_thread_sleep(1);
 }
 
-inline void
+void
 save_game(void)
 {
     uint8_t         i,

@@ -239,9 +239,9 @@ struct avr_thread *
 avr_thread_init(uint16_t main_stack_size,
                 enum avr_thread_priority main_priority)
 {
-    uint8_t         ints;
+    uint8_t         sreg;
 
-    ints = SREG & 0x80;
+    sreg = SREG;
     cli();
 
     avr_thread_run_queue = NULL;
@@ -271,12 +271,12 @@ avr_thread_init(uint16_t main_stack_size,
     avr_thread_switch_to(avr_thread_active_thread->sp);
 
     avr_thread_initialised = 1;
-    SREG |= ints;
+    SREG = sreg;
     return avr_thread_main_thread;
 
   error:
     avr_thread_initialised = 0;
-    SREG |= ints;
+    SREG = sreg;
     return NULL;
 }
 
@@ -285,21 +285,21 @@ avr_thread_create(void (*entry) (void), uint8_t * stack,
                   uint16_t stack_size,
                   enum avr_thread_priority priority)
 {
-    uint8_t         ints;
+    uint8_t         sreg;
     struct avr_thread *t;
 
-    ints = SREG & 0x80;
+    sreg = SREG;
     cli();
 
     if (stack_size < 36) {
-        SREG |= ints;
+        SREG = sreg;
         return NULL;
     }
 
     t = malloc(sizeof(struct avr_thread));
 
     if (t == NULL) {
-        SREG |= ints;
+        SREG = sreg;
         return NULL;
     }
 
@@ -312,7 +312,7 @@ avr_thread_create(void (*entry) (void), uint8_t * stack,
      * avr_thread_yield(); } 
      */
 
-    SREG |= ints;
+    SREG = sreg;
     return t;
 }
 
@@ -434,9 +434,9 @@ avr_thread_sleep(uint16_t ticks)
     volatile struct avr_thread *t,
                    *p;
 
-    uint8_t         ints;
+    uint8_t         sreg;
 
-    ints = SREG & 0x80;
+    sreg = SREG;
     cli();
 
     /*
@@ -480,7 +480,7 @@ avr_thread_sleep(uint16_t ticks)
   _exit_from_sleep:
     avr_thread_active_thread->state = ats_sleeping;
     avr_thread_yield();
-    SREG |= ints;
+    SREG = sreg;
     return;
 }
 
@@ -503,9 +503,9 @@ avr_thread_exit(void)
 int8_t
 avr_thread_cancel(struct avr_thread *t)
 {
-    uint8_t         ints;
+    uint8_t         sreg;
 
-    ints = SREG & 0x80;
+    sreg = SREG;
     cli();
 
     /*
@@ -551,20 +551,20 @@ avr_thread_cancel(struct avr_thread *t)
      */
     free(t);
 
-    SREG |= ints;
+    SREG = sreg;
     return 0;
 
   error:
-    SREG |= ints;
+    SREG = sreg;
     return 1;
 }
 
 void
 avr_thread_pause(struct avr_thread *t)
 {
-    uint8_t         ints;
+    uint8_t         sreg;
 
-    ints = SREG & 0x80;
+    sreg = SREG;
     cli();
 
     if (t == NULL || t == avr_thread_active_thread) {
@@ -576,16 +576,16 @@ avr_thread_pause(struct avr_thread *t)
     t->state = ats_paused;
 
   exit:
-    SREG |= ints;
+    SREG = sreg;
     return;
 }
 
 void
 avr_thread_resume(struct avr_thread *t)
 {
-    uint8_t         ints;
+    uint8_t         sreg;
 
-    ints = SREG & 0x80;
+    sreg = SREG;
     cli();
 
     if (t == NULL || t->state != ats_paused) {
@@ -600,17 +600,20 @@ avr_thread_resume(struct avr_thread *t)
     }
 
   exit:
-    SREG |= ints;
+    SREG = sreg;
     return;
 }
 
 void
 avr_thread_yield(void)
 {
-    uint8_t         ints;
+    uint8_t         sreg;
     volatile struct avr_thread *t;
 
-    ints = SREG & 0x80;
+    /*
+     * This trick is from BDMICRO LLC.
+     */
+    sreg = SREG & 0x80;
     cli();
 
     /*
@@ -650,18 +653,18 @@ avr_thread_yield(void)
         avr_thread_switch_to(avr_thread_active_thread->sp);
     }
 
-    SREG |= ints;
+    SREG |= sreg;
     return;
 }
 
 void
 avr_thread_join(struct avr_thread *t)
 {
-    uint8_t         ints;
+    uint8_t         sreg;
     volatile struct avr_thread *r,
                    *p;
 
-    ints = SREG & 0x80;
+    sreg = SREG;
     cli();
 
     /*
@@ -689,7 +692,7 @@ avr_thread_join(struct avr_thread *t)
     avr_thread_active_thread->state = ats_joined;
     avr_thread_yield();
 
-    SREG |= ints;
+    SREG = sreg;
     return;
 }
 

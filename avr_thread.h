@@ -49,7 +49,7 @@
 /*
  * The number of ticks per second 
  */
-#define FIRE_PER_SEC    15
+#define FIRE_PER_SEC    20
 /*
  * 32 GP + 1 SREG 
  */
