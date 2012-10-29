@@ -1,5 +1,4 @@
 /*-
- * Copyright (c) 2002-2004  Brian S. Dean <bsd@bdmicro.com>
  * Copyright (c) 2012       Meitian Huang <_@freeaddr.info>
  * All rights reserved.
  *

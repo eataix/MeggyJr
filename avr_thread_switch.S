@@ -1,5 +1,4 @@
 /*-
- *  Copyright (c) 2000-2004 Dean Ferreyra <dean@octw.com>
  *  Copyright (c) 2012      Meitian Huang <_@freeaddr.info>
  *  All rights reserved.
  *

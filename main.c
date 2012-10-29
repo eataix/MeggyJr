@@ -44,6 +44,12 @@
 /*
  * Location of the cursor
  */
+
+/**
+ * Here I demonstrate how to use EEPROM. Yet, please refer to
+ * http://www.fourwalledcubicle.com/AVRArticles.php
+ * for more information.
+ */
 uint8_t         xc;
 uint8_t EEMEM   ee_xc = 6;
 
@@ -63,6 +69,9 @@ uint8_t EEMEM   ee_game_over = 0;
 
 uint8_t         tone_current;
 uint8_t EEMEM   ee_tone_current = 0;
+
+uint8_t         dataLights;
+uint8_t EEMEM   ee_dataLights = 0x03;
 
 uint8_t         player_colors[] = { Red, Yellow, Dark };
 
@@ -91,6 +100,10 @@ struct avr_thread
                *button_thread,
                *led_thread,
                *save_point_thread;
+
+uint8_t         key_stack[50],
+                led_stack[50],
+                save_stack[300];
 
 /*
  * Prototypes
@@ -168,12 +181,9 @@ void
 led_entry(void)
 {
     while (1) {
-        if (player_turn) {
-            meggyjr_set_led_binary(0b01010101);
-        } else {
-            meggyjr_set_led_binary(0b10101010);
-        }
-        avr_thread_sleep(4);
+        meggyjr_set_led(dataLights);
+        avr_thread_sleep(10);
+        dataLights = (dataLights << 1) | (dataLights >> 7);
     }
 }
 
@@ -187,10 +197,6 @@ save_point_entry(void)
         avr_thread_yield();
     }
 }
-
-uint8_t         key_stack[50],
-                led_stack[50],
-                save_stack[300];
 
 int
 main(void)
@@ -243,6 +249,7 @@ restore_game(void)
         tone_current = 0;
         button_a = 0;
         sound_enabled = 1;
+        dataLights = 3;
 
     } else {
 
@@ -253,6 +260,7 @@ restore_game(void)
         player_turn = eeprom_read_byte(&ee_player_turn);
         tone_current = eeprom_read_byte(&ee_tone_current);
         sound_enabled = eeprom_read_byte(&ee_sound_enabled);
+        dataLights = eeprom_read_byte(&ee_dataLights);
 
         swipe_image((uint8_t *) board);
     }
@@ -274,6 +282,7 @@ loop(void)
         tone_current = 0;
         button_a = 0;
         sound_enabled = 1;
+        dataLights = 3;
     }
 
     if (button_up) {
@@ -396,6 +405,7 @@ save_game(void)
     eeprom_update_byte(&ee_game_over, game_over);
     eeprom_update_byte(&ee_tone_current, tone_current);
     eeprom_update_byte(&ee_sound_enabled, sound_enabled);
+    eeprom_update_byte(&ee_dataLights, dataLights);
 }
 
 
