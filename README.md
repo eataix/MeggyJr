@@ -1,5 +1,5 @@
-AVR-Thread
-==========
+MeggyJr
+=======
 
 This is an attempt to bring multithreading to AVR.
 
