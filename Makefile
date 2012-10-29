@@ -141,7 +141,7 @@ CFLAGS=-I. $(INC) -g -mmcu=$(MCU) -O$(OPTLEVEL) \
 	-fpack-struct -fshort-enums             \
 	-funsigned-bitfields -funsigned-char    \
 	-DF_CPU=16000000UL                       \
-	-Wall -Wstrict-prototypes                \
+	-Wall -Wstrict-prototypes -std=c99\
 	-Wextra -Wshadow           \
 	-Wpointer-arith -Wcast-qual -Wcast-align \
 	-Wstrict-prototypes -Wmissing-prototypes \

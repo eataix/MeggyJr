@@ -30,6 +30,7 @@
 #include <avr_thread.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/eeprom.h>
 
 #include "meggyjr.h"
 
@@ -43,17 +44,17 @@
 /*
  * Location of the cursor
  */
-byte            xc,
+uint8_t         xc,
                 yc;
 
 uint8_t         player_turn,    /* 1 if it is player's turn */
                 sound_enabled;  /* 1 if the sound is enabled */
 
-byte            player_colors[] = { Red, Yellow, Dark };
+uint8_t         player_colors[] = { Red, Yellow, Dark };
 
 uint8_t         game_over;
 
-byte            cols[7],
+uint8_t         cols[7],
                 rows[7];
 
 int             tune_win[] =
@@ -62,15 +63,15 @@ int             tune_win[] =
 int             tune_lose[] =
     { ToneG4, ToneE4, ToneF4, ToneE4, ToneD4, ToneC4, ToneC4, 0 };
 
-byte            tone_current;
+uint8_t         tone_current;
 
 struct avr_thread_mutex *mutex;
 
-volatile byte   button_a;
-volatile byte   button_up;
-volatile byte   button_down;
-volatile byte   button_left;
-volatile byte   button_right;
+volatile uint8_t button_a;
+volatile uint8_t button_up;
+volatile uint8_t button_down;
+volatile uint8_t button_left;
+volatile uint8_t button_right;
 
 struct avr_thread
                *main_thread,
@@ -90,13 +91,13 @@ void            clear_board(void);
 
 void            draw_board(void);
 
-void            swipe_image(byte * new_image);
+void            swipe_image(uint8_t * new_image);
 
 void            heavy(void);
 
 void            next_player(void);
 
-uint8_t         check_three(byte i, byte j);
+uint8_t         check_three(uint8_t i, uint8_t j);
 
 void            flash_three(void);
 
@@ -104,11 +105,13 @@ void            player_move(void);
 
 void            computer_move(void);
 
-int             calculate_score(byte col);
+int             calculate_score(uint8_t col);
 
 void            button_buffer_entry(void);
 
 void            led_entry(void);
+
+void            save_game(void);
 
 void
 button_buffer_entry(void)
@@ -163,7 +166,6 @@ main(void)
 {
     meggyjr_setup();
     meggyjr_clear_slate();
-    sei();
     main_thread = avr_thread_init(300, atp_normal);
 
     button_a = 0;
@@ -180,18 +182,41 @@ main(void)
     led_thread = avr_thread_create(led_entry, led_stack,
                                    sizeof led_stack, atp_normal);
 
-    xc = 6;
-    yc = 6;
-
-    player_turn = 1;
-    draw_splash();
-    draw_board();
-    game_over = 0;
-    tone_current = 0;
-    sound_enabled = 1;
+    restore_game();
 
     while (1) {
         loop();
+    }
+}
+
+void
+restore_game(void)
+{
+    uint8_t         board[8][8];
+
+    game_over = eeprom_read_byte((uint8_t*)23);
+
+    if (game_over) {
+        xc = 6;
+        yc = 6;
+
+        player_turn = 1;
+        draw_splash();
+        draw_board();
+        game_over = 0;
+        tone_current = 0;
+        button_a = 0;
+        sound_enabled = 1;
+    } else {
+
+        eeprom_read_block((void *)&board, (const void*)40, 64);
+        xc = eeprom_read_byte((uint8_t *)20);
+        yc = eeprom_read_byte((uint8_t *)21);
+        player_turn = eeprom_read_byte((uint8_t*)22);
+        tone_current = eeprom_read_byte((uint8_t*)24);
+        sound_enabled = eeprom_read_byte((uint8_t*)25);
+
+        swipe_image(board);
     }
 }
 
@@ -210,6 +235,7 @@ loop(void)
         game_over = 0;
         tone_current = 0;
         button_a = 0;
+        sound_enabled = 1;
     }
 
     if (button_up) {
@@ -241,6 +267,8 @@ loop(void)
         computer_move();
     }
 
+    save_game();
+
     avr_thread_yield();
 }
 
@@ -266,10 +294,10 @@ draw_splash(void)
 void
 flash_screen(int n, int ms)
 {
-    byte            count,
+    uint8_t         count,
                     i,
                     j;
-    byte            save_screen[64];
+    uint8_t         save_screen[64];
 
     for (count = 0; count < n; ++count) {
         for (j = 0; j < 8; ++j) {
@@ -293,7 +321,7 @@ flash_screen(int n, int ms)
 void
 clear_board(void)
 {
-    byte            i,
+    uint8_t         i,
                     j;
 
     for (j = 7; j > 0; --j) {
@@ -312,10 +340,33 @@ clear_board(void)
 }
 
 void
+save_game(void)
+{   
+    uint8_t         i,
+                    j;
+    uint8_t         board[8][8];
+
+    for (i = 0; i < 8; ++i) {
+        for (j = 0; j < 8; ++j) {
+            board[j][i] = meggyjr_read_pixel(i, j);
+        }
+    }
+    eeprom_update_block((const void*)board, (void*)40, 64);
+
+    eeprom_update_byte((uint8_t*)20, xc);
+    eeprom_update_byte((uint8_t*)21, yc);
+    eeprom_update_byte((uint8_t*)22, player_turn);
+    eeprom_update_byte((uint8_t*)23, game_over);
+    eeprom_update_byte((uint8_t*)24, tone_current);
+    eeprom_update_byte((uint8_t*)25, sound_enabled);
+}
+
+
+void
 draw_board(void)
 {
-    byte            i;
-    byte            board[64];
+    uint8_t         i;
+    uint8_t         board[64];
 
     for (i = 0; i < 64; ++i) {
         board[i] = Dark;
@@ -331,9 +382,9 @@ draw_board(void)
 }
 
 void
-swipe_image(byte * new_image)
+swipe_image(uint8_t * new_image)
 {
-    byte            i,
+    uint8_t         i,
                     j;
     int             wait = 1;
     for (j = 0; j < 8; ++j) {
@@ -350,7 +401,7 @@ heavy()
 {
     int             row,
                     wait;
-    wait = 1;
+    wait = 4;
 
     row = yc;
 
@@ -373,7 +424,7 @@ heavy()
     }
 }
 
-void
+inline void
 next_player(void)
 {
     if (player_turn == 0) {
@@ -384,10 +435,10 @@ next_player(void)
 }
 
 uint8_t
-check_three(byte i, byte j)
+check_three(uint8_t i, uint8_t j)
 {
-    byte            in_a_row;
-    byte            color = meggyjr_read_pixel(i, j);
+    uint8_t         in_a_row;
+    uint8_t         color = meggyjr_read_pixel(i, j);
 
     int             row,
                     col;
@@ -511,8 +562,8 @@ check_three(byte i, byte j)
 void
 flash_three(void)
 {
-    byte            save[3];
-    byte            i;
+    uint8_t         save[3];
+    uint8_t         i;
 
     for (i = 0; i < 3; ++i) {
         save[i] = meggyjr_read_pixel(cols[i], rows[i]);
@@ -580,7 +631,7 @@ computer_move(void)
         meggyjr_draw(xc, yc, Dark);
         meggyjr_draw(xc - 1, yc, player_colors[player_turn]);
         meggyjr_display_slate();
-        avr_thread_sleep(1);
+        avr_thread_sleep(3);
     }
     max_score = -1;
     for (; xc < 6; ++xc) {
@@ -608,20 +659,20 @@ computer_move(void)
         meggyjr_draw(xc, yc, Dark);
         meggyjr_draw(xc - 1, yc, player_colors[player_turn]);
         meggyjr_display_slate();
-        avr_thread_sleep(1);
+        avr_thread_sleep(3);
     }
 
     heavy();
 }
 
 int
-calculate_score(byte col)
+calculate_score(uint8_t col)
 {
     int             score,
                     r,
                     c;
 
-    byte            row;
+    uint8_t         row;
 
     score = 0;
 

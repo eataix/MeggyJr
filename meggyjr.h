@@ -24,14 +24,13 @@
 #include <stddef.h>
 
 #define DIMENSION 8
-#define byte uint8_t
 
-extern volatile byte meggyjr_button_a;
-extern volatile byte meggyjr_button_b;
-extern volatile byte meggyjr_button_up;
-extern volatile byte meggyjr_button_down;
-extern volatile byte meggyjr_button_left;
-extern volatile byte meggyjr_button_right;
+extern volatile uint8_t meggyjr_button_a;
+extern volatile uint8_t meggyjr_button_b;
+extern volatile uint8_t meggyjr_button_up;
+extern volatile uint8_t meggyjr_button_down;
+extern volatile uint8_t meggyjr_button_left;
+extern volatile uint8_t meggyjr_button_right;
 
 
 #define MeggyCursorColor   15,15,15
@@ -72,19 +71,19 @@ void            meggyjr_check_button_pressed(void);
  * Please consider of using meggyjr_set_led_binary() instead and that 
  * requires a less complicated argument.
  */
-void            meggyjr_set_led(byte n);
+void            meggyjr_set_led(uint8_t n);
 
-void            meggyjr_set_led_binary(byte n);
+void            meggyjr_set_led_binary(uint8_t n);
 
 /*
  * Draws a pixel with coordinate x, y on the board with specified colour
  */
-void            meggyjr_draw(byte x, byte y, byte colour);
+void            meggyjr_draw(uint8_t x, uint8_t y, uint8_t colour);
 
 /*
  * Reads the colour of a pixel.
  */
-byte            meggyjr_read_pixel(byte x, byte y);
+uint8_t         meggyjr_read_pixel(uint8_t x, uint8_t y);
 
 /*
  * Clears (dims) the whole slate.

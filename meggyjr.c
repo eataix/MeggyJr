@@ -20,18 +20,18 @@
 #include "meggyjr.h"
 #include "meggyjr_basic.h"
 
-volatile byte   meggyjr_button_a;
-volatile byte   meggyjr_button_b;
-volatile byte   meggyjr_button_up;
-volatile byte   meggyjr_button_down;
-volatile byte   meggyjr_button_left;
-volatile byte   meggyjr_button_right;
+volatile uint8_t meggyjr_button_a;
+volatile uint8_t meggyjr_button_b;
+volatile uint8_t meggyjr_button_up;
+volatile uint8_t meggyjr_button_down;
+volatile uint8_t meggyjr_button_left;
+volatile uint8_t meggyjr_button_right;
 
-static volatile byte meggyjr_game_slate[DIMENSION][DIMENSION];
-static volatile byte last_button_state;
+static volatile uint8_t meggyjr_game_slate[DIMENSION][DIMENSION];
+static volatile uint8_t last_button_state;
 
 // Color lookup Table
-static byte     meggyjr_colour_table[26][3] = {
+static uint8_t  meggyjr_colour_table[26][3] = {
     {MeggyDark}
     ,
     {MeggyRed}
@@ -88,7 +88,7 @@ static byte     meggyjr_colour_table[26][3] = {
 void
 meggyjr_check_button_down(void)
 {
-    byte            i;
+    uint8_t         i;
     i = meggyjr_get_button();
 
     meggyjr_button_b = (i & 1);
@@ -104,7 +104,7 @@ meggyjr_check_button_down(void)
 void
 meggyjr_check_button_pressed(void)
 {
-    byte            i,
+    uint8_t         i,
                     j;
 
     i = meggyjr_get_button();
@@ -121,13 +121,13 @@ meggyjr_check_button_pressed(void)
 }
 
 inline void
-meggyjr_set_led(byte n)
+meggyjr_set_led(uint8_t n)
 {
     leds = n;
 }
 
 inline void
-meggyjr_set_led_binary(byte n)
+meggyjr_set_led_binary(uint8_t n)
 {
     n = (n & 240) >> 4 | (n & 15) << 4;
     n = (n & 204) >> 2 | (n & 51) << 2;
@@ -135,13 +135,13 @@ meggyjr_set_led_binary(byte n)
 }
 
 inline void
-meggyjr_draw(byte x, byte y, byte colour)
+meggyjr_draw(uint8_t x, uint8_t y, uint8_t colour)
 {
     meggyjr_game_slate[x][y] = colour;
 }
 
-inline          byte
-meggyjr_read_pixel(byte x, byte y)
+inline          uint8_t
+meggyjr_read_pixel(uint8_t x, uint8_t y)
 {
     return meggyjr_game_slate[x][y];
 }
@@ -149,8 +149,8 @@ meggyjr_read_pixel(byte x, byte y)
 void
 meggyjr_clear_slate(void)
 {
-    byte            i;
-    byte            j;
+    uint8_t         i;
+    uint8_t         j;
 
     for (i = 0; i < 8; ++i) {
         for (j = 0; j < 8; ++j) {
@@ -162,7 +162,7 @@ meggyjr_clear_slate(void)
 void
 meggyjr_display_slate(void)
 {
-    byte            i,
+    uint8_t         i,
                     j;
 
     for (i = 0; i < 8; ++i) {

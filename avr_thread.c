@@ -32,10 +32,12 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/atomic.h>
 
 #include "avr_thread.h"
 
 #define IDLE_THREAD_STACK_SIZE 60
+
 #define MAX_READER 10
 
 /**
@@ -123,7 +125,7 @@ struct avr_thread_rwlock {
  * Variables
  * =========
  */
-volatile uint8_t      avr_thread_initialised = 0;
+volatile uint8_t avr_thread_initialised = 0;
 
 static struct avr_thread *avr_thread_main_thread;
 
@@ -272,7 +274,7 @@ avr_thread_init(uint16_t main_stack_size,
     SREG |= ints;
     return avr_thread_main_thread;
 
-error:
+  error:
     avr_thread_initialised = 0;
     SREG |= ints;
     return NULL;
@@ -903,7 +905,7 @@ avr_thread_mutex_unlock(volatile struct avr_thread_mutex *mutex)
     cli();
 
     if (mutex == NULL) {
-        sei();
+        SREG = sreg;
         return;
     }
 
@@ -925,7 +927,6 @@ avr_thread_mutex_unlock(volatile struct avr_thread_mutex *mutex)
         }
     }
 
-    SREG = sreg;
     /*
      * You may do an avr_thread_yield() here.
      */
@@ -1079,11 +1080,10 @@ avr_thread_sem_down(volatile struct avr_thread_semaphore *sem)
 static          int8_t
 avr_thread_atomic_add(int8_t x, int8_t delta)
 {
-    int             i;
-    i = SREG & 0x80;
-    cli();
-    x += delta;
-    SREG = i;
+
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        x += delta;
+    }
     return x;
 }
 

@@ -124,6 +124,4 @@ void            meggyjr_start_tone(unsigned int tone,
 
 void            meggyjr_set_sound_state(byte t);
 
-void            meggyjr_delay(uint16_t ms);
-
 #endif

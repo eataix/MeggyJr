@@ -26,15 +26,15 @@
 
 #define F_CPU 16000000UL
 
-static volatile byte frame[DISP_BUFFER_SIZE];
-volatile byte   leds;
+static volatile uint8_t frame[DISP_BUFFER_SIZE];
+volatile uint8_t leds;
 
-static volatile byte current_column;
-static volatile byte *current_column_ptr;
-static volatile byte current_brightness;
+static volatile uint8_t current_column;
+static volatile uint8_t *current_column_ptr;
+static volatile uint8_t current_brightness;
 
 static volatile unsigned int tone_time_remaining;
-static volatile byte sound_enabled;
+static volatile uint8_t sound_enabled;
 
 void
 meggyjr_init(void)
@@ -67,13 +67,13 @@ meggyjr_init(void)
     OCR2A = (F_CPU >> 3) / 8 / 15 / FPS;
     TIMSK2 = (1 << OCIE2A);
 
-    // sei();
+    sei();
 }
 
 void
 meggyjr_clear_frame(void)
 {
-    byte            i;
+    uint8_t         i;
     // I hope this can be as fast as memset(3).
     for (i = 0; i < DISP_BUFFER_SIZE; ++i) {
         frame[i] = 0;
@@ -81,11 +81,11 @@ meggyjr_clear_frame(void)
 }
 
 void
-meggyjr_set_pixel_color(byte x, byte y, byte * rgb)
+meggyjr_set_pixel_color(uint8_t x, uint8_t y, uint8_t * rgb)
 {
-    byte            pixelPtr;
+    uint8_t         pixelPtr;
 
-    pixelPtr = (byte) 24 *x + y;
+    pixelPtr = (uint8_t) 24 *x + y;
     frame[pixelPtr] = rgb[2];
     pixelPtr += 8;
     frame[pixelPtr] = rgb[1];
@@ -93,28 +93,28 @@ meggyjr_set_pixel_color(byte x, byte y, byte * rgb)
     frame[pixelPtr] = rgb[0];
 }
 
-inline          byte
-meggyjr_get_pixel_red(byte x, byte y)
+inline          uint8_t
+meggyjr_get_pixel_red(uint8_t x, uint8_t y)
 {
     return frame[24 * x + y + 16];
 }
 
-inline          byte
-meggyjr_get_pixel_green(byte x, byte y)
+inline          uint8_t
+meggyjr_get_pixel_green(uint8_t x, uint8_t y)
 {
     return frame[24 * x + y + 8];
 }
 
-inline          byte
-meggyjr_get_pixel_blue(byte x, byte y)
+inline          uint8_t
+meggyjr_get_pixel_blue(uint8_t x, uint8_t y)
 {
     return frame[24 * x + y];
 }
 
 void
-meggyjr_clear_pixel(byte x, byte y)
+meggyjr_clear_pixel(uint8_t x, uint8_t y)
 {
-    byte            pixelPtr;
+    uint8_t         pixelPtr;
     pixelPtr = 24 * x + y;
     frame[pixelPtr] = 0;
     pixelPtr += 8;
@@ -123,7 +123,7 @@ meggyjr_clear_pixel(byte x, byte y)
     frame[pixelPtr] = 0;
 }
 
-inline          byte
+inline          uint8_t
 meggyjr_get_button(void)
 {
     return (~(PINC) & 63U);
@@ -138,7 +138,7 @@ meggyjr_start_tone(unsigned int tone, unsigned int duration)
 }
 
 void
-meggyjr_set_sound_state(byte t)
+meggyjr_set_sound_state(uint8_t t)
 {
     if (t) {
         TCCR1A = 65;
@@ -161,12 +161,12 @@ meggyjr_set_sound_state(byte t)
 }
 
 static volatile uint8_t num_redraws = 0;
-static volatile byte *ptr;
-static byte     p;
-static byte     cb;
-static byte     bits;
-static byte     portbTemp;
-static byte     portdTemp;
+static volatile uint8_t *ptr;
+static uint8_t  p;
+static uint8_t  cb;
+static uint8_t  bits;
+static uint8_t  portbTemp;
+static uint8_t  portdTemp;
 
 /**
  * ISR
