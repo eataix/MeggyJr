@@ -218,10 +218,21 @@ ISR(TIMER2_COMPA_vect, ISR_NAKED)
         if (current_column > 7) {
             current_column = 0;
             current_column_ptr = frame;
-            ++num_redraws;
-            if (num_redraws == FPS / FIRE_PER_SEC) {
-                num_redraws = 0;
-                SP = (uint16_t) avr_thread_tick((uint8_t *) SP);
+            /*
+             * You don't pay for what you don't use!
+             */
+            if (avr_thread_initialised == 1) {
+                ++num_redraws;
+                if (num_redraws == FPS / FIRE_PER_SEC) {
+                    /*
+                     * In AVR, SP is directly readable and writeable.
+                     * Yet, its type is trick. It is uint16_t according
+                     * to the manual of AVR Libc. Thus, I need to do
+                     * two conversions.
+                     */
+                    SP = (uint16_t) avr_thread_tick((uint8_t *) SP);
+                    num_redraws = 0;
+                }
             }
         } else {
             current_column_ptr += 24;   // 3 * 8

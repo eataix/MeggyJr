@@ -70,24 +70,6 @@
  */
 
 /*
- * States of a thread
- */
-enum avr_thread_state {
-    ats_invalid,                /* Cannot be run (stopped or
-                                 * uninitialised) */
-    ats_runnable,               /* Can be run */
-    ats_paused,                 /* Pausing, is not runnable until
-                                 * resume() */
-    ats_sleeping,               /* Sleeping, not runnable until timer
-                                 * runs off */
-    ats_joined,                 /* Joined to another thread, is not
-                                 * runnable until that thread stops */
-    ats_cancelled,              /* Cancelle by a thread */
-    ats_waiting                 /* Waiting to lock a mutex or a
-                                 * semaphore */
-};
-
-/*
  * Priority of a thread
  *
  * WARNING: If one wants to use this, please make sure starvation is
@@ -98,6 +80,8 @@ enum avr_thread_priority {
     atp_important,
     atp_critical
 };
+
+extern volatile uint8_t avr_thread_initialised;
 
 /*
  * Here are the major structs. Yes, these four lines are everything a
@@ -193,13 +177,24 @@ uint8_t        *avr_thread_tick(uint8_t * saved_sp);
  */
 void            avr_thread_save_sp(uint8_t * sp);
 
-
 /*
  * Cancels a thread.
  *
- * This function should be _avoided_.
+ * WARNING:
  *
- * Similar to pthread_cancel(3) but different from it in terms of:
+ * This function should be _avoided_ because:
+ *
+ * 1. The implementation is naive. Cancelling a thread will directly
+ * remove the thread from records and remove all information about the
+ * thread from memory. Thus, the behaviour of cancelling a thread and
+ * then trying to do other operations on the thread is undefined.
+ *
+ * 2. The thread does not have a chance to voluntarily release its
+ * resources (mutex, semaphore, and rw lock). Thus, deadlock may occur
+ * if the programmer does not pay enough attention.
+ *
+ * This function is similar to pthread_cancel(3) but different from 
+ * pthread_cancle(3) in terms of:
  *
  * 1. pthread_cancel allows the programmers to specify cleanup handlers.
  * The resource holding by the thread to be cancelled can be released.

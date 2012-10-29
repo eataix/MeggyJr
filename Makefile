@@ -148,7 +148,7 @@ CFLAGS=-I. $(INC) -g -mmcu=$(MCU) -O$(OPTLEVEL) \
 	-Wa,-ahlms=$(firstword                  \
 	$(filter %.lst, $(<:.c=.lst)))
 
-	#-Wconversion \
+#-Wconversion \
 
 # c++ specific flags
 CPPFLAGS=-fno-exceptions               \

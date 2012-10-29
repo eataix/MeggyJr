@@ -24,10 +24,6 @@
 #include <stddef.h>
 
 #define DIMENSION 8
-
-#define MeggyCursorColor   15,15,15     // You can define color
-                                        // constants
-                                        // like this.
 #define byte uint8_t
 
 extern volatile byte meggyjr_button_a;
@@ -38,6 +34,7 @@ extern volatile byte meggyjr_button_left;
 extern volatile byte meggyjr_button_right;
 
 
+#define MeggyCursorColor   15,15,15
 // Assign those colors names that we can use:
 enum colors {
     Dark, Red, Orange, Yellow, Green, Blue, Violet, White,

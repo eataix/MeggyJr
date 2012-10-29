@@ -44,6 +44,24 @@
  * Here are the _definition_ of data structures.
  */
 
+/*
+ * States of a thread
+ */
+enum avr_thread_state {
+    ats_invalid,                /* Cannot be run (stopped or
+                                 * uninitialised) */
+    ats_runnable,               /* Can be run */
+    ats_paused,                 /* Pausing, is not runnable until
+                                 * resume() */
+    ats_sleeping,               /* Sleeping, not runnable until timer
+                                 * runs off */
+    ats_joined,                 /* Joined to another thread, is not
+                                 * runnable until that thread stops */
+    ats_cancelled,              /* Cancelle by a thread */
+    ats_waiting                 /* Waiting to lock a mutex or a
+                                 * semaphore */
+};
+
 struct avr_thread {
     /*
      * I am WARNING you: DO NOT TOUCH THESE MEMBERS in your program.
@@ -105,6 +123,8 @@ struct avr_thread_rwlock {
  * Variables
  * =========
  */
+volatile uint8_t      avr_thread_initialised = 0;
+
 static struct avr_thread *avr_thread_main_thread;
 
 static struct avr_thread *avr_thread_idle_thread;
@@ -225,28 +245,37 @@ avr_thread_init(uint16_t main_stack_size,
     avr_thread_run_queue = NULL;
     avr_thread_sleep_queue = NULL;
 
+    avr_thread_main_thread = avr_thread_create(NULL, NULL,
+                                               main_stack_size,
+                                               main_priority);
 
-    // Initialise the idle context.
     avr_thread_idle_thread =
         avr_thread_create(avr_thread_idle_thread_entry,
                           avr_thread_idle_stack,
                           sizeof(avr_thread_idle_stack), atp_normal);
 
-    avr_thread_run_queue_remove(avr_thread_idle_thread);
-
-    avr_thread_main_thread = avr_thread_create(NULL, NULL,
-                                               main_stack_size,
-                                               main_priority);
+    if (avr_thread_idle_thread == NULL ||
+        avr_thread_main_thread == NULL) {
+        goto error;
+    }
 
     avr_thread_prev_thread = avr_thread_main_thread;
     avr_thread_active_thread = avr_thread_idle_thread;
 
-    // Force a context switch.
+    /*
+     * Force a context switch so that the data in the main thread is
+     * set properly.
+     */
     avr_thread_switch_to(avr_thread_active_thread->sp);
 
+    avr_thread_initialised = 1;
     SREG |= ints;
-
     return avr_thread_main_thread;
+
+error:
+    avr_thread_initialised = 0;
+    SREG |= ints;
+    return NULL;
 }
 
 struct avr_thread *
@@ -512,6 +541,12 @@ avr_thread_cancel(struct avr_thread *t)
     avr_thread_sleep_queue_remove(t);
 
     t->state = ats_invalid;
+    /*
+     * I know Gcc generates warning for the following line of code.
+     * 
+     * The problem is that if a thread is cancelled, what will happen to
+     * its struct?
+     */
     free(t);
 
     SREG |= ints;
