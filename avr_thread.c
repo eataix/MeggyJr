@@ -630,13 +630,16 @@ avr_thread_yield(void)
         avr_thread_active_thread->ticks =
             avr_thread_active_thread->quantum;
     } else if (avr_thread_active_thread->state == ats_invalid) {
+        /*
+         * The active thread is self-deconstructing.
+         */
         avr_thread_prev_thread = avr_thread_active_thread;
         avr_thread_active_thread = t;
         free(avr_thread_prev_thread);
         avr_thread_active_thread->ticks =
             avr_thread_active_thread->quantum;
-        avr_thread_switch_to_without_save
-            (avr_thread_active_thread->sp);
+        avr_thread_switch_to_without_save(avr_thread_active_thread->
+                                          sp);
     } else {
         avr_thread_prev_thread = avr_thread_active_thread;
         avr_thread_active_thread = t;

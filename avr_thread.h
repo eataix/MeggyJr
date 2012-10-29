@@ -86,13 +86,30 @@ extern volatile uint8_t avr_thread_initialised;
 /*
  * Here are the major structs. Yes, these four lines are everything a
  * programmer needs to know.
+ *
+ * You will not be able to put them on the stack (i.e., you cannot
+ * have:
+ *
+ *  ...
+ *  struct avr_thread foo;
+ *  ...
+ *
+ * in your code because the compiler does not know the size.
+ * Please use:
+ *
+ *  ...
+ *  struct avr_thread *foo;
+ *  foo = avr_thread_create(...);
+ *  ...
+ *
+ * instead.
+ *
  * They are deliberately written as opaque data types to prevent
- * programmers from touching members of these structs in the program.
- * In other words, _all_ members are private members.
+ * programmers from touching members of these structs in their programs.
  *
  * Note:
  * I know even I work hard to hide members from programmers, programmers
- * still can be accessed the members by using pointer arithmetic...
+ * still can access the members by using pointer arithmetic...
  */
 
 struct avr_thread;
