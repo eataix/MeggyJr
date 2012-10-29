@@ -44,26 +44,37 @@
 /*
  * Location of the cursor
  */
-uint8_t         xc,
-                yc;
+uint8_t         xc;
+uint8_t EEMEM   ee_xc = 6;
 
-uint8_t         player_turn,    /* 1 if it is player's turn */
-                sound_enabled;  /* 1 if the sound is enabled */
+uint8_t         yc;
+uint8_t EEMEM   ee_yc = 6;;
+
+uint8_t EEMEM   ee_board[8][8];
+
+uint8_t         player_turn;    /* 1 if it is player's turn */
+uint8_t EEMEM   ee_player_turn = 0;
+
+uint8_t         sound_enabled;  /* 1 if the sound is enabled */
+uint8_t EEMEM   ee_sound_enabled = 1;
+
+uint8_t         game_over;
+uint8_t EEMEM   ee_game_over = 0;
+
+uint8_t         tone_current;
+uint8_t EEMEM   ee_tone_current = 0;
 
 uint8_t         player_colors[] = { Red, Yellow, Dark };
 
-uint8_t         game_over;
 
-uint8_t         cols[7],
-                rows[7];
+uint8_t         cols[7];
+uint8_t         rows[7];
 
 int             tune_win[] =
     { ToneG4, ToneA5, ToneB5, ToneA5, ToneC6, ToneD6, 0 };
 
 int             tune_lose[] =
     { ToneG4, ToneE4, ToneF4, ToneE4, ToneD4, ToneC4, ToneC4, 0 };
-
-uint8_t         tone_current;
 
 struct avr_thread_mutex
                *mutex_button_pressed,
@@ -219,7 +230,7 @@ restore_game(void)
 {
     uint8_t         board[8][8];
 
-    game_over = eeprom_read_byte((uint8_t *) 23);
+    game_over = eeprom_read_byte(&ee_game_over);
 
     if (game_over) {
         xc = 6;
@@ -232,14 +243,16 @@ restore_game(void)
         tone_current = 0;
         button_a = 0;
         sound_enabled = 1;
+
     } else {
 
-        eeprom_read_block((void *) &board, (const void *) 40, 64);
-        xc = eeprom_read_byte((uint8_t *) 20);
-        yc = eeprom_read_byte((uint8_t *) 21);
-        player_turn = eeprom_read_byte((uint8_t *) 22);
-        tone_current = eeprom_read_byte((uint8_t *) 24);
-        sound_enabled = eeprom_read_byte((uint8_t *) 25);
+        eeprom_read_block((void *) &board, (const void *) &ee_board,
+                          64);
+        xc = eeprom_read_byte(&ee_xc);
+        yc = eeprom_read_byte(&ee_yc);
+        player_turn = eeprom_read_byte(&ee_player_turn);
+        tone_current = eeprom_read_byte(&ee_tone_current);
+        sound_enabled = eeprom_read_byte(&ee_sound_enabled);
 
         swipe_image((uint8_t *) board);
     }
@@ -374,14 +387,15 @@ save_game(void)
             board[j][i] = meggyjr_read_pixel(i, j);
         }
     }
-    eeprom_update_block((const void *) board, (void *) 40, 64);
 
-    eeprom_update_byte((uint8_t *) 20, xc);
-    eeprom_update_byte((uint8_t *) 21, yc);
-    eeprom_update_byte((uint8_t *) 22, player_turn);
-    eeprom_update_byte((uint8_t *) 23, game_over);
-    eeprom_update_byte((uint8_t *) 24, tone_current);
-    eeprom_update_byte((uint8_t *) 25, sound_enabled);
+    eeprom_update_block((const void *) board, (void *) &ee_board, 64);
+
+    eeprom_update_byte(&ee_xc, xc);
+    eeprom_update_byte(&ee_yc, yc);
+    eeprom_update_byte(&ee_player_turn, player_turn);
+    eeprom_update_byte(&ee_game_over, game_over);
+    eeprom_update_byte(&ee_tone_current, tone_current);
+    eeprom_update_byte(&ee_sound_enabled, sound_enabled);
 }
 
 
