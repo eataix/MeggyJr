@@ -65,8 +65,9 @@ int             tune_lose[] =
 
 uint8_t         tone_current;
 
-struct avr_thread_mutex *mutex,
-                        *mutex_save;
+struct avr_thread_mutex
+               *mutex_button_pressed,
+               *mutex_save_point;
 
 volatile uint8_t button_a;
 volatile uint8_t button_up;
@@ -76,9 +77,9 @@ volatile uint8_t button_right;
 
 struct avr_thread
                *main_thread,
-               *key_thread,
+               *button_thread,
                *led_thread,
-               *saving_thread;
+               *save_point_thread;
 
 /*
  * Prototypes
@@ -113,13 +114,18 @@ void            button_buffer_entry(void);
 
 void            led_entry(void);
 
+void            save_point_entry(void);
+
 void            save_game(void);
+
+void            restore_game(void);
+
 
 void
 button_buffer_entry(void)
 {
     while (1) {
-        avr_thread_mutex_lock(mutex);
+        avr_thread_mutex_lock(mutex_button_pressed);
         meggyjr_check_button_pressed();
         if (meggyjr_button_a) {
             avr_thread_resume(led_thread);
@@ -142,7 +148,7 @@ button_buffer_entry(void)
         if (meggyjr_button_right) {
             button_right = 1;
         }
-        avr_thread_mutex_unlock(mutex);
+        avr_thread_mutex_unlock(mutex_button_pressed);
         avr_thread_yield();
     }
 }
@@ -161,12 +167,12 @@ led_entry(void)
 }
 
 void
-save_entry(void)
+save_point_entry(void)
 {
     while (1) {
-        avr_thread_mutex_lock(mutex_save);
+        avr_thread_mutex_lock(mutex_save_point);
         save_game();
-        avr_thread_mutex_unlock(mutex_save);
+        avr_thread_mutex_unlock(mutex_save_point);
         avr_thread_yield();
     }
 }
@@ -188,17 +194,18 @@ main(void)
     button_left = 0;
     button_right = 0;
 
-    mutex = avr_thread_mutex_init();
-    mutex_save = avr_thread_mutex_init();
+    mutex_button_pressed = avr_thread_mutex_init();
+    mutex_save_point = avr_thread_mutex_init();
 
-    key_thread = avr_thread_create(button_buffer_entry, key_stack,
-                                   sizeof key_stack, atp_normal);
+    button_thread = avr_thread_create(button_buffer_entry, key_stack,
+                                      sizeof key_stack, atp_normal);
 
     led_thread = avr_thread_create(led_entry, led_stack,
                                    sizeof led_stack, atp_normal);
 
-    saving_thread = avr_thread_create(save_entry, save_stack,
-                                      sizeof save_stack, atp_normal);
+    save_point_thread =
+        avr_thread_create(save_point_entry, save_stack,
+                          sizeof save_stack, atp_normal);
 
     restore_game();
 
@@ -212,7 +219,7 @@ restore_game(void)
 {
     uint8_t         board[8][8];
 
-    game_over = eeprom_read_byte((uint8_t*)23);
+    game_over = eeprom_read_byte((uint8_t *) 23);
 
     if (game_over) {
         xc = 6;
@@ -227,21 +234,21 @@ restore_game(void)
         sound_enabled = 1;
     } else {
 
-        eeprom_read_block((void *)&board, (const void*)40, 64);
-        xc = eeprom_read_byte((uint8_t *)20);
-        yc = eeprom_read_byte((uint8_t *)21);
-        player_turn = eeprom_read_byte((uint8_t*)22);
-        tone_current = eeprom_read_byte((uint8_t*)24);
-        sound_enabled = eeprom_read_byte((uint8_t*)25);
+        eeprom_read_block((void *) &board, (const void *) 40, 64);
+        xc = eeprom_read_byte((uint8_t *) 20);
+        yc = eeprom_read_byte((uint8_t *) 21);
+        player_turn = eeprom_read_byte((uint8_t *) 22);
+        tone_current = eeprom_read_byte((uint8_t *) 24);
+        sound_enabled = eeprom_read_byte((uint8_t *) 25);
 
-        swipe_image(board);
+        swipe_image((uint8_t *) board);
     }
 }
 
 void
 loop(void)
 {
-    avr_thread_mutex_lock(mutex);
+    avr_thread_mutex_lock(mutex_button_pressed);
 
     if (button_a) {
         xc = 6;
@@ -264,7 +271,7 @@ loop(void)
         button_up = 0;
     }
 
-    avr_thread_mutex_unlock(mutex);
+    avr_thread_mutex_unlock(mutex_button_pressed);
     if (game_over) {
         meggyjr_draw(xc, yc, Dark);
         flash_three();
@@ -355,9 +362,9 @@ clear_board(void)
     avr_thread_sleep(1);
 }
 
-void
+inline void
 save_game(void)
-{   
+{
     uint8_t         i,
                     j;
     uint8_t         board[8][8];
@@ -367,14 +374,14 @@ save_game(void)
             board[j][i] = meggyjr_read_pixel(i, j);
         }
     }
-    eeprom_update_block((const void*)board, (void*)40, 64);
+    eeprom_update_block((const void *) board, (void *) 40, 64);
 
-    eeprom_update_byte((uint8_t*)20, xc);
-    eeprom_update_byte((uint8_t*)21, yc);
-    eeprom_update_byte((uint8_t*)22, player_turn);
-    eeprom_update_byte((uint8_t*)23, game_over);
-    eeprom_update_byte((uint8_t*)24, tone_current);
-    eeprom_update_byte((uint8_t*)25, sound_enabled);
+    eeprom_update_byte((uint8_t *) 20, xc);
+    eeprom_update_byte((uint8_t *) 21, yc);
+    eeprom_update_byte((uint8_t *) 22, player_turn);
+    eeprom_update_byte((uint8_t *) 23, game_over);
+    eeprom_update_byte((uint8_t *) 24, tone_current);
+    eeprom_update_byte((uint8_t *) 25, sound_enabled);
 }
 
 
@@ -417,7 +424,7 @@ heavy()
 {
     int             row,
                     wait;
-    avr_thread_mutex_lock(mutex_save);
+    avr_thread_mutex_lock(mutex_save_point);
     wait = 4;
 
     row = yc;
@@ -439,7 +446,7 @@ heavy()
         }
         next_player();
     }
-    avr_thread_mutex_unlock(mutex_save);
+    avr_thread_mutex_unlock(mutex_save_point);
 }
 
 inline void
@@ -600,7 +607,7 @@ flash_three(void)
 void
 player_move(void)
 {
-    avr_thread_mutex_lock(mutex);
+    avr_thread_mutex_lock(mutex_button_pressed);
 
     if (button_down) {
         heavy();
@@ -632,7 +639,7 @@ player_move(void)
         button_left = 0;
     }
 
-    avr_thread_mutex_unlock(mutex);
+    avr_thread_mutex_unlock(mutex_button_pressed);
 
     meggyjr_draw(xc, yc, player_colors[player_turn]);
     meggyjr_display_slate();
